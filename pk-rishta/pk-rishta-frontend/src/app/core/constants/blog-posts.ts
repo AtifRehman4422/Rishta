@@ -1,0 +1,165 @@
+export interface BlogPost {
+  slug: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  author: string;
+  readMinutes: number;
+  publishedAt: string;
+  coverGradient: string;
+  coverIcon: string;
+  metaDescription: string;
+  content: string[];
+}
+
+export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'how-to-find-right-rishta-pakistan',
+    title: 'How to Find the Right Rishta in Pakistan — A Complete Guide',
+    excerpt:
+      'Practical steps for families and individuals searching for a halal, compatible marriage partner across Pakistan and overseas.',
+    category: 'Rishta Guide',
+    author: 'PK Rishta Team',
+    readMinutes: 8,
+    publishedAt: '2026-06-15',
+    coverGradient: 'linear-gradient(135deg, #6B0F1A 0%, #9B1B30 50%, #C9A227 100%)',
+    coverIcon: '💍',
+    metaDescription:
+      'Learn how to find the right rishta in Pakistan with family involvement, profile tips, and halal matrimonial best practices.',
+    content: [
+      'Finding the right rishta is one of the most important decisions in life. In Pakistan, this journey is deeply connected to family values, faith, and cultural traditions. Whether you are in Karachi, Lahore, Islamabad, or living overseas, a thoughtful approach saves time and brings barakah to the process.',
+      'Start by discussing expectations openly with your family. Age range, education, city, sect, and lifestyle preferences should be clear before you begin searching. When everyone understands the goals, mismatched proposals are reduced and conversations stay respectful.',
+      'A complete matrimonial profile makes a strong first impression. Share accurate details about education, profession, family background, and what you are looking for in a partner. Honesty builds trust — the foundation of every successful marriage.',
+      'Use filters wisely on PK Rishta: search by province, city, religion, marital status, and education. Review profiles carefully and note compatibility in values, not just appearance or income.',
+      'When you find a promising profile, request contact through the platform. Admin verification helps protect both parties. Meet families in a respectful setting, involve elders, and ask meaningful questions about faith, finances, and future plans.',
+      'Remember: patience and dua are part of the journey. The right rishta comes at the right time. May Allah make your search easy and blessed.',
+    ],
+  },
+  {
+    slug: 'questions-before-marriage-pakistani-couples',
+    title: '10 Important Questions to Ask Before Marriage in Pakistani Culture',
+    excerpt:
+      'Essential questions about faith, family, finances, and lifestyle that every couple and family should discuss before nikah.',
+    category: 'Marriage Tips',
+    author: 'PK Rishta Team',
+    readMinutes: 7,
+    publishedAt: '2026-06-08',
+    coverGradient: 'linear-gradient(135deg, #4a1942 0%, #9B1B30 60%, #D4567A 100%)',
+    coverIcon: '💬',
+    metaDescription:
+      'Ten essential pre-marriage questions for Pakistani couples and families — faith, finances, family, and lifestyle compatibility.',
+    content: [
+      'Before nikah, meaningful conversation prevents misunderstandings later. These questions are not meant to create doubt — they help both families align expectations with honesty and respect.',
+      '1. Religious practice: How do you practice Islam daily? What are your expectations about prayer, fasting, and raising children with Islamic values?',
+      '2. Family involvement: What role will parents and in-laws play after marriage? How will decisions be made together?',
+      '3. Finances: Who will manage household expenses? Are there debts, savings goals, or support obligations for parents or siblings?',
+      '4. Living arrangements: Will you live independently or with family? What are your views on joint family living?',
+      '5. Career and education: Do you support your spouse working or studying after marriage? Any relocation plans?',
+      '6. Children: When do you hope to have children? How many? What parenting style and values matter most?',
+      '7. Health and lifestyle: Any medical conditions families should know about? Views on diet, social life, and travel?',
+      '8. Conflict resolution: How do you handle disagreements? What does respect look like during difficult conversations?',
+      '9. Boundaries with others: Views on privacy, social media, and friendships after marriage.',
+      '10. Long-term vision: Where do you see yourselves in five to ten years — city, career, family goals?',
+      'Discuss these topics calmly with family present when appropriate. A marriage built on clarity is stronger than one built on assumptions.',
+    ],
+  },
+  {
+    slug: 'online-matrimonial-safety-tips',
+    title: 'Online Matrimonial Safety Tips — Protect Yourself on Rishta Platforms',
+    excerpt:
+      'Stay safe while searching for marriage online: verify profiles, protect personal data, and recognize red flags.',
+    category: 'Safety',
+    author: 'PK Rishta Team',
+    readMinutes: 6,
+    publishedAt: '2026-05-28',
+    coverGradient: 'linear-gradient(135deg, #1e3a5f 0%, #9B1B30 70%, #C4314E 100%)',
+    coverIcon: '🛡️',
+    metaDescription:
+      'Online matrimonial safety tips for Pakistan — verify profiles, avoid scams, protect personal information on rishta websites.',
+    content: [
+      'Online rishta platforms make it easier to connect across cities and countries, but safety must come first. Follow these guidelines to protect yourself and your family.',
+      'Never share CNIC copies, bank details, or passwords with strangers. Legitimate platforms like PK Rishta use admin-verified contact requests instead of exposing numbers publicly.',
+      'Be cautious of anyone who pressures you to decide quickly, asks for money, or refuses family involvement. These are common warning signs in matrimonial scams.',
+      'Verify information independently. Cross-check education, profession, and family details during family meetings. Trust is earned through consistency over time.',
+      'Meet in safe, public or family settings for initial interactions. Avoid isolated meetings with unknown individuals.',
+      'Report suspicious profiles or harassment through the platform complaint system. Admin review helps keep the community safe for everyone.',
+      'Use strong passwords and log out on shared devices. Your matrimonial account contains personal information that deserves protection.',
+    ],
+  },
+  {
+    slug: 'complete-matrimonial-profile-tips',
+    title: 'How to Create a Complete Matrimonial Profile That Gets Responses',
+    excerpt:
+      'Profile photo, about me, partner preferences, and contact details — everything you need for a trustworthy rishta profile.',
+    category: 'Profile Tips',
+    author: 'PK Rishta Team',
+    readMinutes: 5,
+    publishedAt: '2026-05-20',
+    coverGradient: 'linear-gradient(135deg, #2d5016 0%, #9B1B30 50%, #C9A227 100%)',
+    coverIcon: '📝',
+    metaDescription:
+      'Tips to create a complete matrimonial profile on PK Rishta — photos, about me, preferences, and verification for better matches.',
+    content: [
+      'Your profile is your introduction to hundreds of families. A complete, honest profile receives more serious inquiries than an empty or vague one.',
+      'Upload a clear, recent photo with a modest, respectful presentation. Profiles with photos receive significantly more views, but never use heavily filtered or misleading images.',
+      'Write a genuine "About Me" section. Mention your education, profession, values, hobbies, and what makes you unique. Avoid generic phrases — specificity attracts compatible matches.',
+      'Fill partner preferences honestly: age range, city, education, marital status, and any important requirements. Realistic preferences lead to better matches.',
+      'Add verified contact numbers through the platform. WhatsApp and phone options help families connect after admin-approved requests.',
+      'Keep your profile updated. Marital status, city, or profession changes should be reflected promptly so search results stay accurate.',
+      'Complete profiles also help admin verification during contact requests — speeding up approval when you find someone interesting.',
+    ],
+  },
+  {
+    slug: 'family-role-pakistani-rishta-process',
+    title: 'The Role of Family in the Pakistani Rishta Process',
+    excerpt:
+      'Why family involvement matters, how to balance tradition with personal choice, and tips for respectful rishta meetings.',
+    category: 'Culture',
+    author: 'PK Rishta Team',
+    readMinutes: 6,
+    publishedAt: '2026-05-12',
+    coverGradient: 'linear-gradient(135deg, #5c3d1e 0%, #9B1B30 55%, #E8A0BF 100%)',
+    coverIcon: '👨‍👩‍👧‍👦',
+    metaDescription:
+      'Understanding family involvement in Pakistani rishta culture — traditions, meetings, and balancing personal choice with family guidance.',
+    content: [
+      'In Pakistani culture, marriage is not only between two individuals — it connects two families. Understanding this helps navigate the rishta process with wisdom and respect.',
+      'Parents and elders often bring experience, network, and dua to the search. Their involvement can filter incompatible matches and provide emotional support during a stressful time.',
+      'At the same time, the bride and groom should have a voice in the final decision. Islam emphasizes consent (ridha) from both parties. The ideal process combines family guidance with personal choice.',
+      'Rishta meetings (mulaqaat) work best when both sides prepare questions in advance, dress appropriately, and keep conversations focused on compatibility rather than material demands.',
+      'Avoid comparing multiple proposals disrespectfully or sharing private details from one meeting with another family. Confidentiality and adab reflect your family\'s character.',
+      'When using online platforms, involve family early. Share profiles with parents before requesting contact. This transparency prevents misunderstandings and builds trust.',
+    ],
+  },
+  {
+    slug: 'overseas-pakistanis-finding-rishta',
+    title: 'Guide for Overseas Pakistanis Finding Rishta Back Home',
+    excerpt:
+      'How Pakistanis in UK, USA, UAE, and Canada can search for compatible rishtay in Pakistan with family support.',
+    category: 'Overseas',
+    author: 'PK Rishta Team',
+    readMinutes: 7,
+    publishedAt: '2026-05-01',
+    coverGradient: 'linear-gradient(135deg, #0f4c75 0%, #9B1B30 45%, #D4AF37 100%)',
+    coverIcon: '✈️',
+    metaDescription:
+      'Rishta guide for overseas Pakistanis — search profiles in Pakistan, involve family, and plan meetings for nikah across borders.',
+    content: [
+      'Millions of Pakistanis live abroad while their hearts remain connected to home. Finding a rishta across borders has unique challenges — distance, time zones, and differing expectations.',
+      'Start by clarifying your long-term plan: Will your spouse relocate abroad? Will you settle in Pakistan? These answers narrow the search significantly.',
+      'Use PK Rishta\'s overseas location options to register your current country while searching profiles in Pakistani cities. Families in both places can review matches together on video calls.',
+      'Involve a trusted family member in Pakistan who can attend meetings on your behalf when you cannot travel immediately. Video introductions are useful, but in-person family meetings remain important before commitment.',
+      'Discuss visa, financial, and cultural adjustment expectations openly. Overseas marriages succeed when both sides understand the practical realities of relocation or long-distance engagement periods.',
+      'Plan visits with enough time for multiple family meetings — not just one rushed trip. Barakah comes with patience and thoroughness.',
+      'May Allah unite overseas Pakistanis with righteous partners who share their values and dreams.',
+    ],
+  },
+];
+
+export function getPostBySlug(slug: string): BlogPost | undefined {
+  return BLOG_POSTS.find((p) => p.slug === slug);
+}
+
+export function getRelatedPosts(slug: string, limit = 3): BlogPost[] {
+  return BLOG_POSTS.filter((p) => p.slug !== slug).slice(0, limit);
+}

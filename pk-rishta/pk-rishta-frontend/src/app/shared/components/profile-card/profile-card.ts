@@ -1,15 +1,17 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Profile } from '../../../core/models';
 import { formatProfileLocation } from '../../../core/constants/pakistan-locations';
 import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
+import { AuthService } from '../../../core/services/auth.service';
+import { FavoritesService } from '../../../core/services/favorites.service';
 
 @Component({
   selector: 'app-profile-card',
   imports: [RouterLink, ProfileAvatarComponent],
   template: `
     <div class="profile-card card animate-fade-in-up" [style.animation-delay]="delay">
-      <div class="card-photo">
+      <div class="card-photo" [class.has-fav]="favorites.canFavorite(profile.id)">
         <app-profile-avatar
           class="card-avatar"
           [photo]="profile.profile_photo"
@@ -18,8 +20,24 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
           [lastName]="profile.last_name"
           size="md"
         />
+        @if (favorites.canFavorite(profile.id)) {
+          <button
+            type="button"
+            class="fav-btn"
+            [class.is-on]="favorites.isFavorite(profile.id)"
+            [attr.aria-label]="favorites.isFavorite(profile.id) ? 'Remove from favorites' : 'Save to favorites'"
+            (click)="onHeart($event)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" [attr.fill]="favorites.isFavorite(profile.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </button>
+        }
         @if (profile.is_verified) {
           <span class="verified-badge" title="Verified">✓</span>
+        }
+        @if (auth.isAdmin() && profile.admin_rating) {
+          <span class="rating-stars" title="Attractiveness">{{ ratingStars(profile.admin_rating) }}</span>
         }
         @if (profile.match_score != null) {
           <span class="match-badge">{{ profile.match_score }}% match</span>
@@ -92,6 +110,38 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
       align-items: center;
       justify-content: center;
       border: 2px solid white;
+    }
+    .has-fav .verified-badge { right: 3.55rem; }
+    .fav-btn {
+      position: absolute;
+      top: 0.85rem;
+      right: 0.75rem;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.38);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 2;
+      padding: 0;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .fav-btn svg { width: 18px; height: 18px; }
+    .fav-btn.is-on { color: #FF5D7A; background: rgba(0, 0, 0, 0.45); }
+    .fav-btn:hover { transform: scale(1.08); background: rgba(0, 0, 0, 0.55); }
+    .rating-stars {
+      position: absolute;
+      top: 1.35rem;
+      left: 1.25rem;
+      color: #FFD700;
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
     }
     .match-badge {
       position: absolute;
@@ -186,4 +236,18 @@ export class ProfileCardComponent {
   @Input({ required: true }) profile!: Profile;
   @Input() delay = '0s';
   readonly formatProfileLocation = formatProfileLocation;
+  readonly favorites = inject(FavoritesService);
+  readonly auth = inject(AuthService);
+
+  onHeart(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.favorites.toggle(this.profile.id, this.profile);
+  }
+
+  ratingStars(n?: number | null): string {
+    const count = Number(n);
+    if (!count || count < 1) return '';
+    return '★'.repeat(Math.min(5, count));
+  }
 }

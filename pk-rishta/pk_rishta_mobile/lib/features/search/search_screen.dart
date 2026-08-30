@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/fade_slide.dart';
 import '../../core/widgets/gradient_header.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/profile_access_gate.dart';
+import '../../core/widgets/profile_card.dart';
 import '../../data/constants/profile_options.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/models/search_filters.dart';
@@ -30,21 +29,55 @@ class SearchScreen extends StatefulWidget {
 }
 
 class SearchScreenState extends State<SearchScreen> {
+  static const _pageSize = 12;
+
   final _repo = ProfileRepository();
   final _filters = SearchFilters();
+  final _scrollController = ScrollController();
 
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = false;
   String? _error;
   List<Profile> _profiles = [];
   int _total = 0;
+  int _page = 1;
+  int _totalPages = 1;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _search();
   }
 
-  /// Apply filters from Home "Search Rishta" (web queryParams parity).
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.extentAfter < 400) {
+      _loadMore();
+    }
+  }
+
+  /// Scrolls this tab's list back to the top when its nav item is tapped.
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  /// Apply filters from Home "Search Matches" (web queryParams parity).
   void applyFilters(SearchFilters filters) {
     setState(() {
       _filters.gender = filters.gender;
@@ -61,16 +94,30 @@ class SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _search() async {
+    if (!AuthController.instance.canViewProfiles) {
+      if (!mounted) return;
+      setState(() {
+        _profiles = [];
+        _loading = false;
+        _error = null;
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final result = await _repo.search(query: _filters.toQuery(limit: 30));
+      final result = await _repo.search(
+        query: _filters.toQuery(limit: _pageSize, page: 1),
+      );
       if (!mounted) return;
       setState(() {
         _profiles = result.profiles;
         _total = result.total;
+        _page = 1;
+        _totalPages = result.totalPages;
+        _hasMore = result.totalPages > 1;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -78,6 +125,34 @@ class SearchScreenState extends State<SearchScreen> {
       setState(() {
         _error = e.message;
         _loading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _loadingMore || !_hasMore) return;
+    if (_page >= _totalPages) {
+      setState(() => _hasMore = false);
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final result = await _repo.search(
+        query: _filters.toQuery(limit: _pageSize, page: _page + 1),
+      );
+      if (!mounted) return;
+      setState(() {
+        _profiles = [..._profiles, ...result.profiles];
+        _page = result.page;
+        _totalPages = result.totalPages;
+        _hasMore = result.page < result.totalPages;
+        _loadingMore = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadingMore = false;
+        _error = e.message;
       });
     }
   }
@@ -106,14 +181,22 @@ class SearchScreenState extends State<SearchScreen> {
     await _search();
   }
 
-  void _clearFilters() {
+  void clearFilters() {
     setState(_filters.reset);
+    _search();
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
+  void _removeFilter(String field) {
+    setState(() => _filters.clearField(field));
     _search();
   }
 
   @override
   Widget build(BuildContext context) {
-    final chips = _filters.summaryChips;
+    final chips = _filters.chipFields;
     return SafeArea(
       bottom: false,
       child: Column(
@@ -126,7 +209,7 @@ class SearchScreenState extends State<SearchScreen> {
                 children: [
                   const AtelierHeaderTitle(
                     title: 'Search Profiles',
-                    subtitle: 'پروفائلز تلاش کریں — filters jaise website',
+                    subtitle: 'Search profiles with the same filters as the website',
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -192,30 +275,19 @@ class SearchScreenState extends State<SearchScreen> {
                   if (chips.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     SizedBox(
-                      height: 34,
+                      height: 40,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
                         children: [
-                          for (final chip in chips)
+                          for (final (label, field) in chips)
                             Padding(
                               padding: const EdgeInsets.only(right: 8),
-                              child: Chip(
-                                label: Text(chip, style: const TextStyle(fontSize: 12)),
-                                backgroundColor: Colors.white.withValues(alpha: 0.18),
-                                side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
-                                labelStyle: const TextStyle(color: Colors.white),
-                                visualDensity: VisualDensity.compact,
-                                padding: EdgeInsets.zero,
+                              child: _FilterChipPill(
+                                label: label,
+                                onDeleted: () => _removeFilter(field),
                               ),
                             ),
-                          ActionChip(
-                            label: const Text('Reset', style: TextStyle(fontSize: 12, color: Colors.white)),
-                            backgroundColor: Colors.white.withValues(alpha: 0.12),
-                            side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-                            onPressed: _clearFilters,
-                            visualDensity: VisualDensity.compact,
-                            avatar: const Icon(Icons.close, size: 14, color: Colors.white),
-                          ),
+                          _ResetPill(onTap: clearFilters),
                         ],
                       ),
                     ),
@@ -279,29 +351,57 @@ class SearchScreenState extends State<SearchScreen> {
 
     final list = RefreshIndicator(
       onRefresh: _search,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        itemCount: _profiles.length + 1,
-        separatorBuilder: (_, index) => index == 0 ? const SizedBox.shrink() : const SizedBox(height: 14),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: Text(
                 '$_total profiles found',
                 style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600),
               ),
-            );
-          }
-          final profile = _profiles[index - 1];
-          return FadeSlide(
-            delay: (index * 40).ms,
-            child: _SearchListTile(
-              profile: profile,
-              onTap: () => _openProfile(profile),
             ),
-          );
-        },
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                mainAxisExtent: 248,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final profile = _profiles[index];
+                  return ProfileCard(
+                    profile: profile,
+                    width: double.infinity,
+                    onTap: () => _openProfile(profile),
+                  );
+                },
+                childCount: _profiles.length,
+              ),
+            ),
+          ),
+          if (_hasMore || _loadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
 
@@ -400,14 +500,14 @@ class _FilterSheetState extends State<_FilterSheet> {
       backgroundColor: AppColors.ivory,
       builder: (context) => _SearchCityPickerSheet(
         title: 'Cities in ${provinceLabel(_draft.province)}',
-        cities: cities,
-        selected: _draft.city,
+        cities: ['Any', ...cities],
+        selected: _draft.city.isEmpty ? 'Any' : _draft.city,
       ),
     );
     if (selected == null || !mounted) return;
     setState(() {
-      _draft.city = selected;
-      _cityText.text = selected;
+      _draft.city = selected == 'Any' ? '' : selected;
+      _cityText.text = _draft.city;
     });
   }
 
@@ -418,12 +518,12 @@ class _FilterSheetState extends State<_FilterSheet> {
     final isOverseas = _draft.province == 'Overseas';
     final cityEnabled = _draft.province.isNotEmpty && !isOverseas;
     final cityLabel = _draft.province.isEmpty
-        ? 'Select province first'
+        ? 'Any'
         : isOverseas
-            ? (_draft.city.isNotEmpty ? _draft.city : 'Any city (optional)')
+            ? (_draft.city.isNotEmpty ? _draft.city : 'Any')
             : (_draft.city.isNotEmpty
                 ? _draft.city
-                : 'Select city (${cities.length})');
+                : 'Any');
     final countryLabel =
         _draft.country.isNotEmpty ? _draft.country : 'Any country';
 
@@ -462,9 +562,10 @@ class _FilterSheetState extends State<_FilterSheet> {
                   _label('Gender'),
                   DropdownButtonFormField<String>(
                     key: ValueKey('f-gender-${_draft.gender}'),
-                    initialValue: _draft.gender.isEmpty ? null : _draft.gender,
-                    decoration: const InputDecoration(hintText: 'Any'),
+                    initialValue: _draft.gender,
+                    decoration: const InputDecoration(),
                     items: const [
+                      DropdownMenuItem(value: '', child: Text('Any')),
                       DropdownMenuItem(value: 'male', child: Text('Male')),
                       DropdownMenuItem(value: 'female', child: Text('Female')),
                     ],
@@ -474,10 +575,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                   _label('Province'),
                   DropdownButtonFormField<String>(
                     key: ValueKey('f-prov-${_draft.province}'),
-                    initialValue: _draft.province.isEmpty ? null : _draft.province,
+                    initialValue: _draft.province,
                     isExpanded: true,
-                    decoration: const InputDecoration(hintText: 'Any'),
+                    decoration: const InputDecoration(),
                     items: [
+                      const DropdownMenuItem(value: '', child: Text('Any')),
                       for (final p in pakistanProvinces)
                         DropdownMenuItem(value: p, child: Text(provinceLabel(p))),
                     ],
@@ -490,7 +592,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                         if (_draft.country == 'Pakistan') _draft.country = '';
                         _cityText.text = _draft.city;
                       } else {
-                        if (_draft.country.isEmpty) _draft.country = 'Pakistan';
+                        _draft.country = '';
                         final allowed = _cityOptions;
                         if (_draft.city.isNotEmpty && !allowed.contains(_draft.city)) {
                           _draft.city = '';
@@ -525,7 +627,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       controller: _cityText,
                       onChanged: (v) => _draft.city = v.trim(),
                       decoration: const InputDecoration(
-                        hintText: 'Any city (optional)',
+                        hintText: 'Any',
                         prefixIcon: Icon(Icons.location_city_outlined),
                       ),
                     )
@@ -568,7 +670,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                             TextField(
                               controller: _minAge,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(hintText: '18'),
+                              decoration: const InputDecoration(hintText: 'Any'),
                             ),
                           ],
                         ),
@@ -582,7 +684,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                             TextField(
                               controller: _maxAge,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(hintText: '45'),
+                              decoration: const InputDecoration(hintText: 'Any'),
                             ),
                           ],
                         ),
@@ -593,9 +695,10 @@ class _FilterSheetState extends State<_FilterSheet> {
                   _label('Marital Status'),
                   DropdownButtonFormField<String>(
                     key: ValueKey('f-ms-${_draft.maritalStatus}'),
-                    initialValue: _draft.maritalStatus.isEmpty ? null : _draft.maritalStatus,
-                    decoration: const InputDecoration(hintText: 'Any'),
+                    initialValue: _draft.maritalStatus,
+                    decoration: const InputDecoration(),
                     items: [
+                      const DropdownMenuItem(value: '', child: Text('Any')),
                       for (final item in maritalStatusOptions)
                         DropdownMenuItem(value: item.$1, child: Text(item.$2)),
                     ],
@@ -603,42 +706,30 @@ class _FilterSheetState extends State<_FilterSheet> {
                   ),
                   const SizedBox(height: 14),
                   _label('Religion'),
-                  Autocomplete<String>(
-                    initialValue: TextEditingValue(text: _draft.religion),
-                    optionsBuilder: (text) {
-                      final q = text.text.toLowerCase();
-                      if (q.isEmpty) return religionOptions;
-                      return religionOptions.where((r) => r.toLowerCase().contains(q));
-                    },
-                    fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-                      return TextField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        onChanged: (v) {
-                          _religion.text = v;
-                          _draft.religion = v.trim();
-                        },
-                        decoration: const InputDecoration(
-                          hintText: 'Any — or type',
-                          prefixIcon: Icon(Icons.mosque_outlined),
-                        ),
-                      );
-                    },
-                    onSelected: (value) {
-                      setState(() {
-                        _draft.religion = value;
-                        _religion.text = value;
-                      });
-                    },
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('f-rel-${_draft.religion}'),
+                    initialValue: _draft.religion,
+                    isExpanded: true,
+                    decoration: const InputDecoration(),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('Any')),
+                      for (final r in religionOptions)
+                        DropdownMenuItem(value: r, child: Text(r)),
+                    ],
+                    onChanged: (v) => setState(() {
+                      _draft.religion = v ?? '';
+                      _religion.text = _draft.religion;
+                    }),
                   ),
                   const SizedBox(height: 14),
                   _label('Education'),
                   DropdownButtonFormField<String>(
                     key: ValueKey('f-edu-${_draft.education}'),
-                    initialValue: _draft.education.isEmpty ? null : _draft.education,
+                    initialValue: _draft.education,
                     isExpanded: true,
-                    decoration: const InputDecoration(hintText: 'Any'),
+                    decoration: const InputDecoration(),
                     items: [
+                      const DropdownMenuItem(value: '', child: Text('Any')),
                       for (final e in educationOptions)
                         DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)),
                     ],
@@ -760,7 +851,7 @@ class _SearchCityPickerSheetState extends State<_SearchCityPickerSheet> {
           Expanded(
             child: ListView.separated(
               itemCount: filtered.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 16),
               itemBuilder: (context, index) {
                 final city = filtered[index];
                 final selected = city == widget.selected;
@@ -782,118 +873,82 @@ class _SearchCityPickerSheetState extends State<_SearchCityPickerSheet> {
   }
 }
 
-class _SearchListTile extends StatelessWidget {
-  const _SearchListTile({required this.profile, required this.onTap});
+class _FilterChipPill extends StatelessWidget {
+  const _FilterChipPill({required this.label, required this.onDeleted});
 
-  final Profile profile;
+  final String label;
+  final VoidCallback onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Material(
+            color: Colors.white.withValues(alpha: 0.25),
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: onDeleted,
+              customBorder: const CircleBorder(),
+              child: const SizedBox(
+                width: 18,
+                height: 18,
+                child: Icon(Icons.close, size: 12, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResetPill extends StatelessWidget {
+  const _ResetPill({required this.onTap});
+
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: Colors.white.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(999),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
+        borderRadius: BorderRadius.circular(999),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      profile.gender == 'female'
-                          ? 'assets/images/avatar-female.png'
-                          : 'assets/images/avatar-male.png',
-                      width: 76,
-                      height: 76,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      height: 3,
-                      decoration: const BoxDecoration(
-                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-                        gradient: LinearGradient(
-                          colors: [AppColors.primary, AppColors.gold],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            profile.fullName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                          ),
-                        ),
-                        if (profile.isVerified) ...[
-                          const SizedBox(width: 6),
-                          const Icon(Icons.verified, size: 16, color: Color(0xFF15803D)),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      [
-                        if (profile.age != null) '${profile.age} yrs',
-                        if (profile.location.isNotEmpty) profile.location,
-                      ].join(' • '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.textMuted),
-                    ),
-                    if (profile.education != null && profile.education!.isNotEmpty)
-                      Text(
-                        profile.education!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
-                      ),
-                    if (profile.maritalStatus != null && profile.maritalStatus!.isNotEmpty)
-                      Text(
-                        maritalStatusLabels[profile.maritalStatus!] ?? profile.maritalStatus!,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                      ),
-                  ],
+              Icon(Icons.close, size: 14, color: Colors.white),
+              SizedBox(width: 4),
+              Text(
+                'Reset',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
-              ),
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: AppColors.blush,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
               ),
             ],
           ),

@@ -1,6 +1,27 @@
 const bcrypt = require('bcryptjs');
 const pool = require('../db');
+const { isProduction } = require('../middleware/security');
 const { normalizeProfileLocation, normalizePartnerPreferencesLocation } = require('../utils/location');
+
+function fail(res, err, status = 500) {
+  return res.status(status).json({
+    success: false,
+    message: isProduction ? 'Request failed' : (err?.message || 'Request failed'),
+  });
+}
+
+function stripNonAdminProfileFields(profile, isAdmin) {
+  if (!profile || typeof profile !== 'object') return profile;
+  delete profile.user_id;
+  delete profile.user_phone;
+  if (!isAdmin) {
+    delete profile.user_email;
+    delete profile.admin_rating;
+    delete profile.contact_request_limit;
+    delete profile.contacts;
+  }
+  return profile;
+}
 
 function calcAge(dob) {
   const birth = new Date(dob);
@@ -11,14 +32,27 @@ function calcAge(dob) {
   return age;
 }
 
+function hasFamilyDetails(value) {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed?.version === 1) {
+      return !!(parsed.father?.alive && parsed.mother?.alive);
+    }
+  } catch {
+    // Legacy free-text family details
+  }
+  return text.length >= 10;
+}
+
 function calculateProfileComplete(profile, hasPhoneContact, preferences = {}) {
   const required = [
     'first_name', 'last_name', 'gender', 'date_of_birth',
     'height_cm', 'weight_kg', 'marital_status', 'color',
     'guardian_type', 'guardian_name', 'disability',
     'religion', 'sect', 'caste', 'languages',
-    'city', 'province', 'education', 'profession',
-    'about_me', 'family_details',
+    'city', 'province', 'education', 'profession', 'hafiz_quran',
   ];
   const hasRequiredFields = required.every((field) => {
     const value = profile[field];
@@ -42,7 +76,7 @@ function calculateProfileComplete(profile, hasPhoneContact, preferences = {}) {
     && preferences.max_age !== undefined
   );
 
-  return hasRequiredFields && hasResidence && hasPhoneContact && hasRequiredPartnerAge;
+  return hasRequiredFields && hasFamilyDetails(profile.family_details) && hasResidence && hasPhoneContact && hasRequiredPartnerAge;
 }
 
 async function refreshProfileCompletion(profileId, client = pool) {
@@ -112,6 +146,17 @@ async function saveProfileContacts(profileId, contacts, client = pool) {
 
 function emptyToNull(val) {
   return val === '' || val === undefined ? null : val;
+}
+
+function coerceWeightKg(profile) {
+  if (!profile) return profile;
+  if (profile.weight_kg == null || profile.weight_kg === '') {
+    profile.weight_kg = null;
+    return profile;
+  }
+  const n = Number(profile.weight_kg);
+  profile.weight_kg = Number.isFinite(n) ? n : null;
+  return profile;
 }
 
 function parseOptionalInt(val) {
@@ -215,19 +260,35 @@ async function searchProfiles(req, res) {
     if (gender) { conditions.push(`p.gender = $${idx++}`); params.push(gender); }
     if (city) { conditions.push(`p.city ILIKE $${idx++}`); params.push(`%${city}%`); }
     if (province) { conditions.push(`p.province = $${idx++}`); params.push(province); }
-    if (country) { conditions.push(`p.country = $${idx++}`); params.push(country); }
-    if (marital_status) { conditions.push(`p.marital_status = $${idx++}`); params.push(marital_status); }
-    if (religion) { conditions.push(`p.religion = $${idx++}`); params.push(religion); }
+    if (country) {
+      const countryValue = String(country).trim();
+      if (countryValue && countryValue.toLowerCase() !== 'pakistan') {
+        conditions.push(`p.country ILIKE $${idx++}`);
+        params.push(countryValue);
+      } else if (countryValue.toLowerCase() === 'pakistan') {
+        conditions.push(`(p.province IS DISTINCT FROM 'Overseas')`);
+      }
+    }
+    if (marital_status) {
+      const raw = String(marital_status).trim().toLowerCase();
+      const mapped = (raw === 'single' || raw === 'never_married') ? 'never_married' : marital_status;
+      conditions.push(`(p.marital_status = $${idx} OR LOWER(REPLACE(p.marital_status, ' ', '_')) = LOWER(REPLACE($${idx}::text, ' ', '_')))`);
+      params.push(mapped);
+      idx++;
+    }
+    if (religion) { conditions.push(`p.religion ILIKE $${idx++}`); params.push(religion); }
     if (sect) { conditions.push(`p.sect = $${idx++}`); params.push(sect); }
     if (education) { conditions.push(`p.education ILIKE $${idx++}`); params.push(`%${education}%`); }
     if (profession) { conditions.push(`p.profession ILIKE $${idx++}`); params.push(`%${profession}%`); }
-    if (min_age) {
-      conditions.push(`p.date_of_birth <= $${idx++}`);
-      params.push(new Date(new Date().setFullYear(new Date().getFullYear() - parseInt(min_age))));
+    const minAge = parseOptionalInt(min_age);
+    const maxAge = parseOptionalInt(max_age);
+    if (minAge !== null) {
+      conditions.push(`EXTRACT(YEAR FROM AGE(p.date_of_birth))::int >= $${idx++}`);
+      params.push(minAge);
     }
-    if (max_age) {
-      conditions.push(`p.date_of_birth >= $${idx++}`);
-      params.push(new Date(new Date().setFullYear(new Date().getFullYear() - parseInt(max_age) - 1)));
+    if (maxAge !== null) {
+      conditions.push(`EXTRACT(YEAR FROM AGE(p.date_of_birth))::int <= $${idx++}`);
+      params.push(maxAge);
     }
 
     if (req.user?.id) {
@@ -244,23 +305,25 @@ async function searchProfiles(req, res) {
     );
 
     params.push(parseInt(limit), offset);
+    const isAdmin = req.user?.role === 'admin';
+    const ratingSelect = isAdmin ? 'p.admin_rating,' : '';
     const result = await pool.query(
       `SELECT p.id, p.first_name, p.last_name, p.gender, p.date_of_birth,
               p.height_cm, p.marital_status, p.religion, p.sect, p.city, p.province, p.country,
               p.education, p.profession, p.about_me, p.profile_photo,
-              p.is_verified, p.profile_views,
+              p.is_verified, ${ratingSelect} p.profile_views,
               EXTRACT(YEAR FROM AGE(p.date_of_birth))::int as age
        FROM profiles p
        JOIN users u ON u.id = p.user_id
        ${where}
-       ORDER BY p.created_at DESC
+       ORDER BY p.is_verified DESC, p.updated_at DESC NULLS LAST, p.created_at DESC
        LIMIT $${idx++} OFFSET $${idx}`,
       params
     );
 
     res.json({
       success: true,
-      data: result.rows,
+      data: result.rows.map((row) => stripNonAdminProfileFields({ ...row }, isAdmin)),
       pagination: {
         total: parseInt(countResult.rows[0].count),
         page: parseInt(page),
@@ -269,7 +332,7 @@ async function searchProfiles(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    fail(res, err);
   }
 }
 
@@ -283,20 +346,19 @@ async function getProfileById(req, res) {
       return res.status(404).json({ success: false, message: 'Profile not found' });
     }
 
-    if (!isAdmin) {
-      await pool.query('UPDATE profiles SET profile_views = profile_views + 1 WHERE id = $1', [id]);
-    }
-
-    const whereClause = isAdmin
-      ? 'WHERE p.id = $1'
-      : `WHERE p.id = $1 AND p.visibility = 'public' AND u.is_active = true`;
-
+    const emailSelect = isAdmin ? 'u.email AS user_email,' : '';
     const result = await pool.query(
-      `SELECT p.*, u.email AS user_email, EXTRACT(YEAR FROM AGE(p.date_of_birth))::int as age
-       FROM profiles p
-       JOIN users u ON u.id = p.user_id
-       ${whereClause}`,
-      [id]
+      isAdmin
+        ? `SELECT p.*, ${emailSelect} EXTRACT(YEAR FROM AGE(p.date_of_birth))::int as age
+           FROM profiles p
+           JOIN users u ON u.id = p.user_id
+           WHERE p.id = $1`
+        : `SELECT p.*, EXTRACT(YEAR FROM AGE(p.date_of_birth))::int as age
+           FROM profiles p
+           JOIN users u ON u.id = p.user_id
+           WHERE p.id = $1
+             AND (p.user_id = $2 OR (p.visibility = 'public' AND u.is_active = true))`,
+      isAdmin ? [id] : [id, req.user.id]
     );
 
     if (!result.rows.length) {
@@ -304,7 +366,24 @@ async function getProfileById(req, res) {
     }
 
     const profile = result.rows[0];
-    delete profile.user_id;
+    const isOwn = profile.user_id === req.user?.id;
+
+    if (!isAdmin && !isOwn) {
+      const viewer = await pool.query(
+        'SELECT is_profile_complete FROM profiles WHERE user_id = $1',
+        [req.user.id]
+      );
+      if (!viewer.rows[0]?.is_profile_complete) {
+        return res.status(403).json({
+          success: false,
+          message: 'Complete your profile to view other members',
+        });
+      }
+      await pool.query('UPDATE profiles SET profile_views = profile_views + 1 WHERE id = $1', [id]);
+    }
+
+    stripNonAdminProfileFields(profile, isAdmin);
+    coerceWeightKg(profile);
     profile.partner_preferences = await getPartnerPreferences(profile.id);
 
     if (isAdmin) {
@@ -314,14 +393,14 @@ async function getProfileById(req, res) {
 
     res.json({ success: true, data: profile });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    fail(res, err);
   }
 }
 
 async function getMyProfile(req, res) {
   try {
     const result = await pool.query(
-      `SELECT p.*, u.email AS user_email, EXTRACT(YEAR FROM AGE(p.date_of_birth))::int as age
+      `SELECT p.*, u.email AS user_email, u.phone AS user_phone, EXTRACT(YEAR FROM AGE(p.date_of_birth))::int as age
        FROM profiles p
        JOIN users u ON u.id = p.user_id
        WHERE p.user_id = $1`,
@@ -333,7 +412,17 @@ async function getMyProfile(req, res) {
     }
 
     const profile = result.rows[0];
+    delete profile.contact_request_limit;
+    coerceWeightKg(profile);
     profile.contacts = await getProfileContacts(profile.id);
+    if (!profile.contacts.length && profile.user_phone) {
+      await pool.query(
+        `INSERT INTO profile_contacts (profile_id, contact_type, number, sort_order)
+         VALUES ($1, 'phone', $2, 0)`,
+        [profile.id, profile.user_phone]
+      );
+      profile.contacts = [{ type: 'phone', number: profile.user_phone }];
+    }
     profile.partner_preferences = await getPartnerPreferences(profile.id);
     res.json({ success: true, data: profile });
   } catch (err) {
@@ -355,7 +444,7 @@ function normalizeProfileBody(body, { optionalLocation = false } = {}) {
     'house_own_location', 'house_rent_location',
     'abroad_country', 'abroad_house_own_location', 'abroad_house_rent_location',
     'profile_photo',
-    'city', 'province', 'country', 'education', 'profession', 'income_range',
+    'city', 'province', 'country', 'education', 'profession', 'hafiz_quran', 'income_range',
     'about_me', 'looking_for', 'family_details', 'visibility',
   ];
   for (const field of nullableFields) {
@@ -400,7 +489,7 @@ async function updateProfileById(profileId, body, { requireContacts = true, opti
       'house_own_location', 'house_rent_location',
       'abroad_country', 'abroad_house_own_location', 'abroad_house_rent_location',
       'profile_photo',
-      'city', 'province', 'country', 'education', 'profession', 'income_range',
+      'city', 'province', 'country', 'education', 'profession', 'hafiz_quran', 'income_range',
       'about_me', 'looking_for', 'family_details', 'visibility',
     ];
 
@@ -495,6 +584,7 @@ async function updateProfileById(profileId, body, { requireContacts = true, opti
     await client.query('COMMIT');
 
     const data = result.rows[0];
+    coerceWeightKg(data);
     const userId = currentResult.rows[0].user_id;
     if (userId) {
       const userRow = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
@@ -590,7 +680,7 @@ async function adminCreateProfile(req, res) {
     const country = payload.country
       || (province === 'Overseas' ? null : 'Pakistan');
 
-    const required = ['first_name', 'last_name', 'gender', 'date_of_birth', 'city', 'province', 'education', 'about_me'];
+    const required = ['first_name', 'last_name', 'gender', 'date_of_birth', 'city', 'province', 'education'];
     const merged = {
       first_name: firstName,
       last_name: lastName,
@@ -610,10 +700,10 @@ async function adminCreateProfile(req, res) {
          guardian_type, guardian_name,
          house_own_location, house_rent_location, profile_photo,
          city, province, country, education, profession, income_range,
-         about_me, looking_for, family_details, visibility,
+         about_me, looking_for, family_details, visibility, hafiz_quran,
          is_profile_complete, is_verified
        ) VALUES (
-         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32
+         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33
        ) RETURNING *`,
       [
         userId,
@@ -646,6 +736,7 @@ async function adminCreateProfile(req, res) {
         payload.looking_for ?? null,
         payload.family_details ?? null,
         payload.visibility || 'public',
+        payload.hafiz_quran ?? null,
         isComplete,
         true,
       ]
@@ -789,8 +880,8 @@ async function getMatchingProfiles(req, res) {
       [own.id, own.gender]
     );
 
-    const minAgeFilter = parseOptionalInt(req.query.min_age);
-    const maxAgeFilter = parseOptionalInt(req.query.max_age);
+    const minAgeFilter = parseOptionalInt(req.query.min_age) ?? parseOptionalInt(preferences.min_age);
+    const maxAgeFilter = parseOptionalInt(req.query.max_age) ?? parseOptionalInt(preferences.max_age);
     const scored = candidateResult.rows
       .filter((candidate) => {
         if (req.query.city && !preferenceMatches(req.query.city, candidate.city)) return false;
@@ -837,7 +928,7 @@ async function getMatchingProfiles(req, res) {
           reasons.push('Preferred height');
         }
 
-        delete candidate.user_id;
+        stripNonAdminProfileFields(candidate, req.user?.role === 'admin');
         return {
           ...candidate,
           match_score: Math.min(score, 100),
@@ -896,7 +987,10 @@ async function getFilterOptions(req, res) {
       Sindh: ['Karachi', 'Hyderabad', 'Sukkur', 'Larkana', 'Mirpur Khas'],
       KPK: ['Peshawar', 'Mardan', 'Mingora', 'Abbottabad', 'Kohat'],
       Balochistan: ['Quetta', 'Turbat', 'Khuzdar', 'Gwadar', 'Hub'],
-      Islamabad: ['Islamabad'],
+      Islamabad: [
+        'Islamabad', 'F-6', 'F-7', 'G-11', 'G-13', 'I-8', 'Bahria Town', 'DHA Islamabad',
+        'Gulberg Greens', 'Soan Garden', 'Bhara Kahu', 'Bani Gala', 'PWD', 'Tarlai', 'Tarnol',
+      ],
       'Gilgit-Baltistan': ['Gilgit', 'Skardu', 'Hunza'],
       AJK: ['Muzaffarabad', 'Mirpur', 'Kotli', 'Rawalakot'],
     };

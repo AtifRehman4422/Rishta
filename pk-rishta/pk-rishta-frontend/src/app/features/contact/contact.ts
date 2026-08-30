@@ -156,7 +156,7 @@ import { ContactService } from '../../core/services/contact.service';
             <p class="hours-note">Pakistan Standard Time (PKT)</p>
           </div>
           <div class="cta-card card">
-            <h3>Looking for a Rishta?</h3>
+            <h3>Looking for a Match?</h3>
             <p>Browse verified profiles across Pakistan.</p>
             <a routerLink="/search" class="btn btn-secondary">Search Profiles</a>
           </div>

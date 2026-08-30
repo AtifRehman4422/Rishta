@@ -88,7 +88,20 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS abroad_house_rent_location TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS weight_kg NUMERIC(5,1);
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS guardian_type VARCHAR(20);
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(150);
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS languages TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS hafiz_quran VARCHAR(10);
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS admin_rating SMALLINT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS contact_request_limit INTEGER;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'profiles_admin_rating_check'
+  ) THEN
+    ALTER TABLE profiles
+      ADD CONSTRAINT profiles_admin_rating_check
+      CHECK (admin_rating IS NULL OR (admin_rating >= 1 AND admin_rating <= 5));
+  END IF;
+END $$;
 ALTER TABLE profiles ALTER COLUMN education TYPE TEXT;
 ALTER TABLE profiles ALTER COLUMN profession TYPE TEXT;
 ALTER TABLE profiles ALTER COLUMN mother_tongue TYPE VARCHAR(200);
@@ -211,9 +224,12 @@ CREATE TABLE IF NOT EXISTS complaint_messages (
     complaint_id    UUID NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
     sender_role     VARCHAR(20) NOT NULL CHECK (sender_role IN ('admin', 'reporter', 'reported')),
     sender_user_id  UUID REFERENCES users(id),
+    recipient_role  VARCHAR(20),
     message         TEXT NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE complaint_messages ADD COLUMN IF NOT EXISTS recipient_role VARCHAR(20);
 
 CREATE INDEX IF NOT EXISTS idx_complaint_messages_complaint ON complaint_messages(complaint_id);
 
@@ -263,6 +279,7 @@ CREATE INDEX IF NOT EXISTS idx_contact_requests_target ON contact_access_request
 CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_unique ON users(phone) WHERE phone IS NOT NULL AND phone != '';
 
 -- Admin-managed dropdown options (extra values beyond built-in lists)
 CREATE TABLE IF NOT EXISTS dropdown_options (

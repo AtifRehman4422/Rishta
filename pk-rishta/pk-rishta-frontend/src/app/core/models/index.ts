@@ -40,6 +40,8 @@ export interface Profile {
   country?: string;
   education?: string;
   profession?: string;
+  /** Yes | No — Hafiz-e-Quran */
+  hafiz_quran?: string;
   income_range?: string;
   about_me?: string;
   looking_for?: string;
@@ -47,8 +49,11 @@ export interface Profile {
   profile_photo?: string;
   email?: string;
   user_email?: string;
+  user_phone?: string;
   is_admin_view?: boolean;
   is_verified?: boolean;
+  admin_rating?: number | null;
+  contact_request_limit?: number | null;
   profile_views?: number;
   visibility?: string;
   is_profile_complete?: boolean;
@@ -144,6 +149,7 @@ export interface AppNotification {
 export interface ComplaintMessage {
   id: string;
   sender_role: 'admin' | 'reporter' | 'reported';
+  recipient_role?: 'reporter' | 'reported' | 'both' | null;
   message: string;
   created_at: string;
 }
@@ -172,6 +178,7 @@ export interface Complaint {
 export interface MyComplaintsData {
   filed: Complaint[];
   against_me: Complaint[];
+  support?: Complaint[];
 }
 
 export interface AdminContactRequest extends ContactAccessRequest {
@@ -217,21 +224,6 @@ export interface Stats {
   cities_covered: string;
 }
 
-export interface Interest {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  status: string;
-  message?: string;
-  first_name: string;
-  last_name: string;
-  city: string;
-  age: number;
-  gender?: 'male' | 'female' | string;
-  profile_photo?: string;
-  created_at: string;
-}
-
 export interface FilterOptions {
   provinces: string[];
   cities: string[];
@@ -248,9 +240,8 @@ export interface AdminStats {
   total_profiles: string;
   verified_profiles: string;
   unverified_profiles: string;
-  total_interests: string;
-  pending_interests: string;
   pending_contact_requests: string;
+  total_contact_requests?: string;
   pending_complaints: string;
   new_contact_messages: string;
   new_users_week: string;

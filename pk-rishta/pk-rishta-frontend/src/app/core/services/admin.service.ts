@@ -61,6 +61,14 @@ export class AdminService {
     return this.http.patch<ApiResponse<Profile>>(`${this.baseUrl}/profiles/${id}/verify`, {});
   }
 
+  rateProfile(id: string, rating: number | null): Observable<ApiResponse<Profile>> {
+    return this.http.patch<ApiResponse<Profile>>(`${this.baseUrl}/profiles/${id}/rating`, { rating });
+  }
+
+  setRequestLimit(id: string, limit: number | null): Observable<ApiResponse<Profile>> {
+    return this.http.patch<ApiResponse<Profile>>(`${this.baseUrl}/profiles/${id}/request-limit`, { limit });
+  }
+
   deleteProfile(id: string): Observable<ApiResponse<null>> {
     return this.http.delete<ApiResponse<null>>(`${this.baseUrl}/profiles/${id}`);
   }
@@ -105,8 +113,11 @@ export class AdminService {
     });
   }
 
-  sendComplaintMessage(id: string, message: string): Observable<ApiResponse<ComplaintMessage>> {
-    return this.http.post<ApiResponse<ComplaintMessage>>(`${this.baseUrl}/complaints/${id}/message`, { message });
+  sendComplaintMessage(id: string, message: string, recipient: 'reporter' | 'reported'): Observable<ApiResponse<ComplaintMessage>> {
+    return this.http.post<ApiResponse<ComplaintMessage>>(`${this.baseUrl}/complaints/${id}/message`, {
+      message,
+      recipient,
+    });
   }
 
   getContactMessages(status = 'new', page = 1, search = ''): Observable<ApiResponse<ContactFormMessage[]>> {
@@ -118,6 +129,10 @@ export class AdminService {
 
   updateContactMessage(id: string, data: { status?: string; admin_notes?: string }): Observable<ApiResponse<ContactFormMessage>> {
     return this.http.patch<ApiResponse<ContactFormMessage>>(`${this.baseUrl}/contact-messages/${id}`, data);
+  }
+
+  replyContactMessage(id: string, data: { message: string; admin_notes?: string }): Observable<ApiResponse<ContactFormMessage>> {
+    return this.http.post<ApiResponse<ContactFormMessage>>(`${this.baseUrl}/contact-messages/${id}/reply`, data);
   }
 
   getDropdownOptions(field = ''): Observable<ApiResponse<DropdownOption[]>> {

@@ -16,6 +16,7 @@ import {
   provinceLabel,
 } from '../../core/constants/pakistan-locations';
 import { EDUCATION_OPTIONS } from '../../core/constants/education';
+import { RELIGION_OPTIONS } from '../../core/constants/religion-sects';
 
 interface SearchFilters {
   gender: string;
@@ -50,7 +51,7 @@ interface SearchFilters {
           <div class="filters-grid">
             <div class="form-group">
               <label class="form-label">Gender</label>
-              <select class="form-select" [(ngModel)]="filters.gender" (change)="search()">
+              <select class="form-select" [(ngModel)]="filters.gender">
                 <option value="">Any</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -71,7 +72,7 @@ interface SearchFilters {
             </div>
             <div class="form-group">
               <label class="form-label">Country</label>
-              <select class="form-select" [(ngModel)]="filters.country" (change)="search()">
+              <select class="form-select" [(ngModel)]="filters.country">
                 <option value="">Any</option>
                 <option value="Pakistan">Pakistan</option>
                 @for (c of overseasCountries; track c) {
@@ -86,33 +87,32 @@ interface SearchFilters {
                   class="form-input"
                   type="text"
                   [(ngModel)]="filters.city"
-                  placeholder="Any city (optional)"
-                  (keyup.enter)="search()"
+                  placeholder="Any"
                 />
               } @else if (filters.province) {
-                <select class="form-select" [(ngModel)]="filters.city" (change)="search()">
-                  <option value="">Any city in {{ provinceLabel(filters.province) }}</option>
+                <select class="form-select" [(ngModel)]="filters.city">
+                  <option value="">Any</option>
                   @for (c of cityOptions; track c) {
                     <option [value]="c">{{ c }}</option>
                   }
                 </select>
               } @else {
-                <select class="form-select" disabled>
-                  <option value="">Select province first</option>
+                <select class="form-select" [(ngModel)]="filters.city">
+                  <option value="">Any</option>
                 </select>
               }
             </div>
             <div class="form-group">
               <label class="form-label">Min Age</label>
-              <input class="form-input" type="number" [(ngModel)]="filters.min_age" placeholder="18" />
+              <input class="form-input" type="number" [(ngModel)]="filters.min_age" placeholder="Any" />
             </div>
             <div class="form-group">
               <label class="form-label">Max Age</label>
-              <input class="form-input" type="number" [(ngModel)]="filters.max_age" placeholder="45" />
+              <input class="form-input" type="number" [(ngModel)]="filters.max_age" placeholder="Any" />
             </div>
             <div class="form-group">
               <label class="form-label">Marital Status</label>
-              <select class="form-select" [(ngModel)]="filters.marital_status" (change)="search()">
+              <select class="form-select" [(ngModel)]="filters.marital_status">
                 <option value="">Any</option>
                 <option value="never_married">Single</option>
                 <option value="divorced">Divorced</option>
@@ -122,24 +122,16 @@ interface SearchFilters {
             </div>
             <div class="form-group">
               <label class="form-label">Religion</label>
-              <input
-                class="form-input"
-                list="filter-religion-suggestions"
-                [(ngModel)]="filters.religion"
-                placeholder="Any — or type"
-                (keyup.enter)="search()"
-              />
-              <datalist id="filter-religion-suggestions">
-                <option value="Islam"></option>
-                <option value="Christianity"></option>
-                <option value="Hinduism"></option>
-                <option value="Sikhism"></option>
-                <option value="Other"></option>
-              </datalist>
+              <select class="form-select" [(ngModel)]="filters.religion">
+                <option value="">Any</option>
+                @for (r of religionOptions; track r) {
+                  <option [value]="r">{{ r }}</option>
+                }
+              </select>
             </div>
             <div class="form-group">
               <label class="form-label">Education</label>
-              <select class="form-select" [(ngModel)]="filters.education" (change)="search()">
+              <select class="form-select" [(ngModel)]="filters.education">
                 <option value="">Any</option>
                 @for (e of educationOptions; track e) {
                   <option [value]="e">{{ e }}</option>
@@ -162,13 +154,13 @@ interface SearchFilters {
           </div>
         </aside>
 
-        <div class="results" [class.results-locked]="!canViewProfiles">
-          @if (!canViewProfiles && !loading() && profiles().length) {
+        <div class="results">
+          @if (!canViewProfiles) {
             <div class="access-overlay card">
               <span class="lock-icon">🔒</span>
               @if (!auth.isLoggedIn()) {
                 <h3>Login to view profiles</h3>
-                <p>Profiles are blurred for privacy. Login or register to continue.</p>
+                <p>Search is only available to registered members with a complete profile.</p>
                 <div class="access-actions">
                   <a routerLink="/login" class="btn btn-primary">Login</a>
                   <a routerLink="/register" class="btn btn-outline">Register Free</a>
@@ -179,16 +171,18 @@ interface SearchFilters {
                 <a routerLink="/my-profile" class="btn btn-primary">Complete Your Profile</a>
               }
             </div>
+          } @else if (searchError()) {
+            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ searchError() }}</div>
           }
-          @if (loading()) {
+          @if (canViewProfiles && loading()) {
             <div class="loading-center"><div class="spinner"></div></div>
-          } @else if (!profiles().length) {
+          } @else if (canViewProfiles && !profiles().length && !searchError()) {
             <div class="empty-state card">
               <span style="font-size: 3rem">🔍</span>
               <h3>No profiles found</h3>
               <p>{{ matchingMode() ? 'No matching profiles right now — check back later' : 'Try adjusting your filters' }}</p>
             </div>
-          } @else {
+          } @else if (canViewProfiles && profiles().length) {
             <div class="grid-2">
               @for (profile of profiles(); track profile.id; let i = $index) {
                 <app-profile-card [profile]="profile" [delay]="(i * 0.05) + 's'" />
@@ -261,18 +255,10 @@ interface SearchFilters {
     .empty-state { text-align: center; padding: 4rem 2rem; }
     .empty-state h3 { margin: 1rem 0 0.5rem; }
     .results { position: relative; min-height: 240px; }
-    .results-locked .grid-2 {
-      filter: blur(9px);
-      opacity: 0.62;
-      pointer-events: none;
-      user-select: none;
-    }
     .access-overlay {
-      position: absolute;
+      position: relative;
       z-index: 5;
-      top: 2rem;
-      left: 50%;
-      transform: translateX(-50%);
+      margin: 2rem auto 0;
       width: min(440px, calc(100% - 2rem));
       padding: 1.75rem;
       text-align: center;
@@ -317,6 +303,7 @@ export class SearchComponent implements OnInit {
   page = signal(1);
   totalPages = signal(1);
   matchingMode = signal(false);
+  searchError = signal('');
 
   get canViewProfiles(): boolean {
     return this.auth.isAdmin()
@@ -328,6 +315,7 @@ export class SearchComponent implements OnInit {
   readonly provinceLabel = provinceLabel;
   readonly isOverseasProvince = isOverseasProvince;
   readonly educationOptions = [...EDUCATION_OPTIONS];
+  readonly religionOptions = [...RELIGION_OPTIONS];
   filters: SearchFilters = {
     gender: '', city: '', province: '', country: '', marital_status: '', religion: '', education: '',
     min_age: '', max_age: '',
@@ -342,7 +330,6 @@ export class SearchComponent implements OnInit {
 
     if (!province) {
       this.filters.city = '';
-      this.search();
       return;
     }
 
@@ -351,16 +338,12 @@ export class SearchComponent implements OnInit {
         this.filters.country = '';
       }
     } else {
-      if (!this.filters.country || this.filters.country === '') {
-        this.filters.country = 'Pakistan';
-      }
+      this.filters.country = '';
       const allowed = citiesForProvince(province);
       if (this.filters.city && !allowed.includes(this.filters.city)) {
         this.filters.city = '';
       }
     }
-
-    this.search();
   }
 
   ngOnInit(): void {
@@ -394,7 +377,14 @@ export class SearchComponent implements OnInit {
   }
 
   search(): void {
+    if (!this.canViewProfiles) {
+      this.profiles.set([]);
+      this.loading.set(false);
+      this.searchError.set('');
+      return;
+    }
     this.loading.set(true);
+    this.searchError.set('');
     const request = this.matchingMode()
       ? this.profileService.getMatches({ ...this.filters, page: this.page() })
       : this.profileService.search({ ...this.filters, page: this.page() });
@@ -404,7 +394,11 @@ export class SearchComponent implements OnInit {
         this.totalPages.set(res.pagination?.totalPages ?? 1);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (err) => {
+        this.loading.set(false);
+        this.profiles.set([]);
+        this.searchError.set(err.error?.message || 'Search failed. Please try again.');
+      },
     });
   }
 

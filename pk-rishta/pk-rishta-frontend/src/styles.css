@@ -329,7 +329,7 @@ img { max-width: 100%; display: block; }
 }
 
 .alert-error { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
-.alert-success { background: #FCE7F3; color: #9B1B30; border: 1px solid #F9A8D4; }
+.alert-success { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
 
 /* Grid */
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../features/admin/admin_complaints_screen.dart';
 import '../../features/profile/my_profile_screen.dart';
 import '../../features/profile/profile_detail_screen.dart';
+import 'auth_controller.dart';
 
 /// Lets deep links / notification taps switch the bottom-nav tab.
 class ShellNavigator extends ChangeNotifier {
@@ -41,7 +43,6 @@ class ShellNavigator extends ChangeNotifier {
         return;
       case '/dashboard':
       case '/admin/contact-requests':
-      case '/admin/complaints':
       default:
         goActivity();
     }
@@ -69,6 +70,13 @@ Future<void> openNotificationDestination(
   if (path == '/my-profile') {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const MyProfileScreen()),
+    );
+    return;
+  }
+
+  if (path == '/admin/complaints' && AuthController.instance.isAdmin) {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const AdminComplaintsScreen()),
     );
     return;
   }

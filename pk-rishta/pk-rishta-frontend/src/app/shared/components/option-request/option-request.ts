@@ -21,6 +21,7 @@ import { DropdownService } from '../../../core/services/dropdown.service';
           <input
             class="form-input"
             [(ngModel)]="text"
+            [ngModelOptions]="{standalone: true}"
             [name]="controlName"
             placeholder="Type the option you need (e.g. profession, caste, city)"
             (keyup.enter)="send()"
@@ -33,6 +34,7 @@ import { DropdownService } from '../../../core/services/dropdown.service';
           >
             {{ sending ? 'Sending...' : 'Send to admin' }}
           </button>
+          <p class="option-request-note">This only asks admin to add a new option. You still must select a listed value before saving.</p>
           @if (feedback) {
             <p class="option-request-feedback" [class.is-error]="feedbackError">{{ feedback }}</p>
           }
@@ -80,6 +82,12 @@ import { DropdownService } from '../../../core/services/dropdown.service';
       cursor: pointer;
     }
     .btn-send-request:disabled { opacity: 0.5; cursor: not-allowed; }
+    .option-request-note {
+      margin: 0;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
     .option-request-feedback {
       margin: 0;
       font-size: 0.82rem;

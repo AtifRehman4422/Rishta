@@ -243,8 +243,8 @@ export class AdminDashboardComponent implements OnInit {
           { icon: '💑', value: +s.total_profiles, displayValue: 0, label: 'Total Profiles', route: '/admin/profiles', accent: '#7A1528', group: 'Profiles' },
           { icon: '✓', value: +s.verified_profiles, displayValue: 0, label: 'Verified Profiles', route: '/admin/profiles', accent: '#0d9488', group: 'Profiles' },
           { icon: '⏳', value: +s.unverified_profiles, displayValue: 0, label: 'Pending Verification', route: '/admin/profiles', accent: '#d97706', group: 'Profiles' },
-          { icon: '💌', value: +s.total_interests, displayValue: 0, label: 'Total Interests', accent: '#be185d', group: 'Engagement' },
-          { icon: '⏳', value: +s.pending_interests, displayValue: 0, label: 'Pending Interests', accent: '#ca8a04', group: 'Engagement' },
+          { icon: '💌', value: +(s.total_contact_requests || 0), displayValue: 0, label: 'Contact Requests', route: '/admin/contact-requests', accent: '#be185d', group: 'Engagement' },
+          { icon: '⏳', value: +s.pending_contact_requests, displayValue: 0, label: 'Pending Requests', route: '/admin/contact-requests', accent: '#ca8a04', group: 'Engagement' },
           { icon: '🆕', value: +s.new_users_week, displayValue: 0, label: 'New This Week', route: '/admin/users', accent: '#2563eb', group: 'Engagement' },
           {
             icon: '👁️',

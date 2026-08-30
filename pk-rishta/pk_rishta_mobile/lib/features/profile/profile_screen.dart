@@ -9,14 +9,41 @@ import '../../core/widgets/atelier_atmosphere.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/fade_slide.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/profile_avatar.dart';
 import '../auth/register_screen.dart';
 import '../info/info_screens.dart';
+import '../admin/admin_complaints_screen.dart';
+import 'favorites_screen.dart';
 import 'my_profile_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.onLogin});
 
   final VoidCallback onLogin;
+
+  @override
+  State<ProfileScreen> createState() => ProfileScreenState();
+}
+
+class ProfileScreenState extends State<ProfileScreen> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls this tab's list back to the top when its nav item is tapped.
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
 
   void _open(BuildContext context, Widget page) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -24,7 +51,7 @@ class ProfileScreen extends StatelessWidget {
 
   void _openMyProfile(BuildContext context) {
     if (!AuthController.instance.isLoggedIn) {
-      onLogin();
+      widget.onLogin();
       return;
     }
     _open(context, const MyProfileScreen());
@@ -45,6 +72,7 @@ class ProfileScreen extends StatelessWidget {
               ? NotificationController.instance.unreadCount
               : 0;
           return ListView(
+            controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
             children: [
               FadeSlide(
@@ -52,7 +80,7 @@ class ProfileScreen extends StatelessWidget {
                     ? _AccountCard(
                         onCompleteProfile: () => _openMyProfile(context),
                       )
-                    : _GuestCard(onLogin: onLogin),
+                    : _GuestCard(onLogin: widget.onLogin),
               ),
               const SizedBox(height: 22),
               FadeSlide(
@@ -71,10 +99,27 @@ class ProfileScreen extends StatelessWidget {
                       badgeCount: unread,
                       onTap: () {
                         if (!auth.isLoggedIn) {
-                          onLogin();
+                          widget.onLogin();
                           return;
                         }
                         _open(context, const NotificationsScreen());
+                      },
+                    ),
+                    if (auth.isAdmin)
+                      _MenuItem(
+                        icon: Icons.forum_outlined,
+                        label: 'Complaint Chats',
+                        onTap: () => _open(context, const AdminComplaintsScreen()),
+                      ),
+                    _MenuItem(
+                      icon: Icons.favorite_border_rounded,
+                      label: 'Favorites',
+                      onTap: () {
+                        if (!auth.isLoggedIn) {
+                          widget.onLogin();
+                          return;
+                        }
+                        _open(context, const FavoritesScreen());
                       },
                     ),
                   ],
@@ -154,20 +199,15 @@ class _AccountCard extends StatelessWidget {
             padding: const EdgeInsets.all(22),
             child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.goldLight, width: 2),
-                  ),
-                  child: CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.white.withValues(alpha: 0.18),
-                    child: Text(
-                      user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
-                      style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                ProfileAvatar(
+                  photoUrl: user.profilePhoto,
+                  gender: user.gender ?? '',
+                  firstName: user.firstName ?? '',
+                  lastName: user.lastName ?? '',
+                  size: 72,
+                  borderWidth: 2,
+                  showVerified: true,
+                  verified: user.profileVerified,
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -199,7 +239,7 @@ class _AccountCard extends StatelessWidget {
                       border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
                     ),
                     child: const Text(
-                      '🔒 Search, matching aur activity unlock hone ke liye pehle profile complete karein — same as website.',
+                      '🔒 Complete your profile first to unlock search, matching, and activity — same as the website.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.white, height: 1.4, fontSize: 13),
                     ),

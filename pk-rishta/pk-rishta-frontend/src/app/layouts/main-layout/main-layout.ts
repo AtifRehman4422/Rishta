@@ -8,6 +8,7 @@ import { NavbarComponent } from '../../shared/components/navbar/navbar';
 import { ScrollToTopComponent } from '../../shared/components/scroll-to-top/scroll-to-top';
 import { ScrollContainerDirective } from '../../shared/directives/scroll-container.directive';
 import { VisitService } from '../../core/services/visit.service';
+import { FavoritesService } from '../../core/services/favorites.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -23,6 +24,17 @@ import { VisitService } from '../../core/services/visit.service';
       </div>
       <app-scroll-to-top />
       <app-cookie-consent />
+      @if (favorites.toast(); as t) {
+        <div
+          class="fav-toast"
+          [class.toast-ok]="t.kind === 'added'"
+          [class.toast-bad]="t.kind === 'removed' || t.kind === 'error'"
+          [class.toast-info]="t.kind === 'info'"
+          role="status"
+        >
+          {{ t.text }}
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -42,11 +54,33 @@ import { VisitService } from '../../core/services/visit.service';
     .main-content {
       min-height: 100%;
     }
+    .fav-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 1.5rem;
+      transform: translateX(-50%);
+      z-index: 1200;
+      padding: 0.85rem 1.25rem;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+      animation: toast-in 0.25s ease;
+      max-width: calc(100% - 2rem);
+    }
+    .toast-ok { background: #15803D; color: #fff; }
+    .toast-bad { background: #B91C1C; color: #fff; }
+    .toast-info { background: #7A1528; color: #fff; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translate(-50%, 10px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
   `],
 })
 export class MainLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly visitService = inject(VisitService);
+  readonly favorites = inject(FavoritesService);
 
   ngOnInit(): void {
     this.visitService.track(this.router.url || '/');

@@ -10,7 +10,7 @@ import { AdminService } from '../../../core/services/admin.service';
   template: `
     <div class="admin-page">
       <h1>Contact Messages</h1>
-      <p class="page-hint">Messages from the public Contact page — reply by email and update status here.</p>
+      <p class="page-hint">Messages from the public Contact page. Type a reply and send it by email, or mark the message as read after you open it.</p>
 
       <div class="toolbar">
         <input
@@ -49,35 +49,63 @@ import { AdminService } from '../../../core/services/admin.service';
               <p class="message-body">{{ m.message }}</p>
 
               <div class="notes-row">
-                <label class="form-label">Admin notes (internal)</label>
+                <label class="form-label">Reply to sender (email)</label>
+                <textarea
+                  class="form-textarea"
+                  [(ngModel)]="replyDrafts[m.id]"
+                  rows="3"
+                  placeholder="Write the email reply to send to {{ m.email }}"
+                ></textarea>
+              </div>
+              <div class="notes-row">
+                <label class="form-label">Admin notes (internal — not emailed)</label>
                 <textarea
                   class="form-textarea"
                   [(ngModel)]="adminNotes[m.id]"
                   rows="2"
-                  placeholder="e.g. Replied via email on..."
+                  placeholder="e.g. Called the user on..."
                 ></textarea>
               </div>
 
+              @if (actionMessage() && actionId() === m.id) {
+                <p class="action-feedback" [class.is-error]="actionError()">{{ actionMessage() }}</p>
+              }
+
               <div class="btn-row">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  (click)="sendReply(m)"
+                  [disabled]="updating()"
+                >
+                  Send Email Reply
+                </button>
                 @if (m.status === 'new') {
-                  <button class="btn btn-outline btn-sm" (click)="updateStatus(m.id, 'read')" [disabled]="updating()">
+                  <button
+                    type="button"
+                    class="btn btn-outline btn-sm"
+                    title="Mark Read means you opened this message. It does not send an email."
+                    (click)="updateStatus(m.id, 'read')"
+                    [disabled]="updating()"
+                  >
                     Mark Read
                   </button>
                 }
                 @if (m.status !== 'replied') {
-                  <button class="btn btn-primary btn-sm" (click)="updateStatus(m.id, 'replied')" [disabled]="updating()">
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="updateStatus(m.id, 'replied')" [disabled]="updating()">
                     Mark Replied
                   </button>
                 }
                 @if (m.status !== 'archived') {
-                  <button class="btn btn-ghost btn-sm" (click)="updateStatus(m.id, 'archived')" [disabled]="updating()">
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="updateStatus(m.id, 'archived')" [disabled]="updating()">
                     Archive
                   </button>
                 }
-                <a [href]="'mailto:' + m.email + '?subject=Re: ' + formatSubject(m.subject)" class="btn btn-secondary btn-sm">
-                  Reply by Email
-                </a>
               </div>
+              <p class="status-help">
+                <strong>Mark Read</strong> = you opened it (no email is sent).
+                <strong>Send Email Reply</strong> = emails the sender from PK Rishta and sets status to Replied.
+              </p>
               @if (m.admin_notes) {
                 <p class="saved-notes">Saved notes: {{ m.admin_notes }}</p>
               }
@@ -146,6 +174,19 @@ import { AdminService } from '../../../core/services/admin.service';
       color: var(--text-muted);
       font-style: italic;
     }
+    .status-help {
+      margin: 0.65rem 0 0;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+    .action-feedback {
+      margin: 0 0 0.65rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #15803d;
+    }
+    .action-feedback.is-error { color: #b91c1c; }
   `],
 })
 export class AdminContactMessagesComponent implements OnInit {
@@ -157,6 +198,10 @@ export class AdminContactMessagesComponent implements OnInit {
   search = '';
   statusFilter = 'new';
   adminNotes: Record<string, string> = {};
+  replyDrafts: Record<string, string> = {};
+  actionMessage = signal('');
+  actionError = signal(false);
+  actionId = signal('');
 
   ngOnInit(): void {
     this.load();
@@ -169,6 +214,7 @@ export class AdminContactMessagesComponent implements OnInit {
         this.messages.set(res.data);
         for (const m of res.data) {
           this.adminNotes[m.id] = m.admin_notes || '';
+          if (!this.replyDrafts[m.id]) this.replyDrafts[m.id] = '';
         }
         this.loading.set(false);
       },
@@ -178,15 +224,54 @@ export class AdminContactMessagesComponent implements OnInit {
 
   updateStatus(id: string, status: string): void {
     this.updating.set(true);
+    this.actionId.set(id);
     this.adminService.updateContactMessage(id, {
       status,
       admin_notes: this.adminNotes[id]?.trim() || undefined,
     }).subscribe({
       next: () => {
         this.updating.set(false);
+        this.actionError.set(false);
+        this.actionMessage.set(status === 'read'
+          ? 'Marked as read. This only updates status — it does not send an email.'
+          : `Status updated to ${this.formatStatus(status)}.`);
         this.load();
       },
-      error: () => this.updating.set(false),
+      error: (err) => {
+        this.updating.set(false);
+        this.actionError.set(true);
+        this.actionMessage.set(err.error?.message || 'Failed to update status');
+      },
+    });
+  }
+
+  sendReply(m: ContactFormMessage): void {
+    const message = (this.replyDrafts[m.id] || '').trim();
+    if (message.length < 5) {
+      this.actionId.set(m.id);
+      this.actionError.set(true);
+      this.actionMessage.set('Type a reply of at least 5 characters, then click Send Email Reply.');
+      return;
+    }
+
+    this.updating.set(true);
+    this.actionId.set(m.id);
+    this.adminService.replyContactMessage(m.id, {
+      message,
+      admin_notes: this.adminNotes[m.id]?.trim() || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.updating.set(false);
+        this.actionError.set(false);
+        this.actionMessage.set(res.message || `Reply sent to ${m.email}`);
+        this.replyDrafts[m.id] = '';
+        this.load();
+      },
+      error: (err) => {
+        this.updating.set(false);
+        this.actionError.set(true);
+        this.actionMessage.set(err.error?.message || 'Failed to send email reply');
+      },
     });
   }
 

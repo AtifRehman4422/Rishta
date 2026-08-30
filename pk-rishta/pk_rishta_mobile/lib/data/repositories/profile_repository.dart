@@ -4,10 +4,19 @@ import '../models/my_profile_model.dart';
 import '../models/profile_model.dart';
 
 class SearchResult {
-  SearchResult({required this.profiles, required this.total});
+  SearchResult({
+    required this.profiles,
+    required this.total,
+    this.page = 1,
+    this.limit = 12,
+    this.totalPages = 1,
+  });
 
   final List<Profile> profiles;
   final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
 }
 
 class ProfileRepository {
@@ -33,7 +42,7 @@ class ProfileRepository {
       'gender': gender,
       'city': city,
       'province': province,
-      'country': country,
+      'country': (country == null || country.toLowerCase() == 'pakistan') ? null : country,
       'marital_status': maritalStatus,
       'religion': religion,
       'education': education,
@@ -46,13 +55,57 @@ class ProfileRepository {
     final list = (result.data as List)
         .map((e) => Profile.fromJson(e as Map<String, dynamic>))
         .toList();
-    final total = (result.pagination?['total'] as int?) ?? list.length;
-    return SearchResult(profiles: list, total: total);
+    final pagination = result.pagination ?? const <String, dynamic>{};
+    return SearchResult(
+      profiles: list,
+      total: (pagination['total'] as int?) ?? list.length,
+      page: (pagination['page'] as int?) ?? page,
+      limit: (pagination['limit'] as int?) ?? limit,
+      totalPages: (pagination['totalPages'] as int?) ?? 1,
+    );
+  }
+
+  Future<SearchResult> getMatches({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final result = await _client.get('/profiles/matches', query: {
+      'page': page,
+      'limit': limit,
+    });
+
+    final list = (result.data as List)
+        .map((e) => Profile.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final pagination = result.pagination ?? const <String, dynamic>{};
+    return SearchResult(
+      profiles: list,
+      total: (pagination['total'] as int?) ?? list.length,
+      page: (pagination['page'] as int?) ?? page,
+      limit: (pagination['limit'] as int?) ?? limit,
+      totalPages: (pagination['totalPages'] as int?) ?? 1,
+    );
   }
 
   Future<Profile> getById(String id) async {
     final result = await _client.get('/profiles/$id');
     return Profile.fromJson(result.data as Map<String, dynamic>);
+  }
+
+  Future<List<Profile>> getFavorites() async {
+    final result = await _client.get('/favorites', query: {'limit': '50'});
+    final list = result.data as List? ?? [];
+    return list
+        .map((e) => Profile.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> addFavorite(String profileId) async {
+    await _client.post('/favorites/$profileId');
+  }
+
+  Future<void> removeFavorite(String profileId) async {
+    await _client.delete('/favorites/$profileId');
   }
 
   Future<MyProfileData> getMyProfile() async {
@@ -65,6 +118,24 @@ class ProfileRepository {
     return MyProfileData.fromJson(result.data as Map<String, dynamic>);
   }
 
+  /// Uploads a profile photo (multipart `photo` field). Returns the new
+  /// `profile_photo` path (e.g. `/uploads/profiles/xxx.jpg`).
+  Future<String> uploadProfilePhoto({
+    required String filename,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    final result = await _client.upload(
+      '/profiles/me/photo',
+      field: 'photo',
+      filename: filename,
+      bytes: bytes,
+      contentType: contentType,
+    );
+    final data = result.data as Map<String, dynamic>?;
+    return (data?['profile_photo'] ?? '').toString();
+  }
+
   Future<List<String>> dropdownOptions(String field) async {
     final result = await _client.get('/dropdowns', query: {'field': field});
     final list = result.data as List? ?? [];
@@ -72,6 +143,24 @@ class ProfileRepository {
         .map((e) => (e as Map<String, dynamic>)['label']?.toString() ?? '')
         .where((e) => e.isNotEmpty)
         .toList();
+  }
+
+  Future<void> requestDropdownOption({
+    required String requestedLabel,
+    required String name,
+    required String email,
+    String fieldKey = '',
+    String fieldLabel = '',
+    String category = '',
+  }) async {
+    await _client.post('/dropdowns/requests', body: {
+      if (fieldKey.isNotEmpty) 'field_key': fieldKey,
+      if (fieldLabel.isNotEmpty) 'field_label': fieldLabel,
+      if (category.isNotEmpty) 'category': category,
+      'requested_label': requestedLabel,
+      'name': name,
+      'email': email,
+    });
   }
 
   Future<void> requestContact(String targetProfileId, {String? message}) async {
@@ -111,70 +200,29 @@ class ProfileRepository {
     });
   }
 
+  Future<void> cancelContactRequest(String id) async {
+    await _client.patch('/contact-requests/$id/cancel', body: {});
+  }
+
   Future<MyComplaintsData> getMyComplaints() async {
     final result = await _client.get('/complaints');
     final data = result.data as Map<String, dynamic>? ?? {};
     return MyComplaintsData.fromJson(data);
   }
 
-  Future<void> replyToComplaint(String id, String message) async {
-    await _client.post('/complaints/$id/reply', body: {'message': message});
-  }
-
-  /// Legacy interest endpoints (kept for compatibility).
-  Future<void> sendInterest(String receiverId, {String? message}) async {
-    await _client.post('/profiles/interests', body: {
-      'receiver_id': receiverId,
-      if (message != null && message.isNotEmpty) 'message': message,
+  Future<void> submitComplaint(
+    String reportedProfileId,
+    String category,
+    String description,
+  ) async {
+    await _client.post('/complaints', body: {
+      'reported_profile_id': reportedProfileId,
+      'category': category,
+      'description': description,
     });
   }
 
-  Future<InterestLists> getMyInterests() async {
-    final result = await _client.get('/profiles/interests');
-    final data = result.data as Map<String, dynamic>;
-    List<InterestItem> parse(String key) => ((data[key] as List?) ?? [])
-        .map((e) => InterestItem.fromJson(e as Map<String, dynamic>))
-        .toList();
-    return InterestLists(sent: parse('sent'), received: parse('received'));
-  }
-}
-
-class InterestLists {
-  InterestLists({required this.sent, required this.received});
-
-  final List<InterestItem> sent;
-  final List<InterestItem> received;
-}
-
-class InterestItem {
-  InterestItem({
-    required this.name,
-    required this.gender,
-    this.age,
-    this.city,
-    this.status,
-    this.message,
-  });
-
-  final String name;
-  final String gender;
-  final int? age;
-  final String? city;
-  final String? status;
-  final String? message;
-
-  factory InterestItem.fromJson(Map<String, dynamic> json) {
-    final first = (json['first_name'] ?? '') as String;
-    final last = (json['last_name'] ?? '') as String;
-    int? toInt(dynamic v) =>
-        v == null ? null : (v is int ? v : int.tryParse(v.toString()));
-    return InterestItem(
-      name: '$first $last'.trim(),
-      gender: (json['gender'] ?? '') as String,
-      age: toInt(json['age']),
-      city: json['city'] as String?,
-      status: json['status'] as String?,
-      message: json['message'] as String?,
-    );
+  Future<void> replyToComplaint(String id, String message) async {
+    await _client.post('/complaints/$id/reply', body: {'message': message});
   }
 }

@@ -1,9 +1,9 @@
 const express = require('express');
 const {
   getDashboardStats, getAllUsers, toggleUserStatus,
-  getAllProfiles, verifyProfile, deleteProfile,
+  getAllProfiles, verifyProfile, rateProfile, setContactRequestLimit, deleteProfile,
   getContactRequests, reviewContactRequest, getComplaints, reviewComplaint, sendComplaintMessage,
-  getContactFormMessages, updateContactFormMessage,
+  getContactFormMessages, updateContactFormMessage, replyContactFormMessage,
 } = require('../controllers/adminController');
 const { adminUpdateProfile, adminCreateProfile } = require('../controllers/profileController');
 const {
@@ -28,6 +28,8 @@ router.get('/profiles', getAllProfiles);
 router.post('/profiles', adminCreateProfile);
 router.put('/profiles/:id', adminUpdateProfile);
 router.patch('/profiles/:id/verify', verifyProfile);
+router.patch('/profiles/:id/rating', rateProfile);
+router.patch('/profiles/:id/request-limit', setContactRequestLimit);
 router.delete('/profiles/:id', deleteProfile);
 router.get('/contact-requests', getContactRequests);
 router.patch('/contact-requests/:id', reviewContactRequest);
@@ -36,6 +38,7 @@ router.patch('/complaints/:id', reviewComplaint);
 router.post('/complaints/:id/message', sendComplaintMessage);
 router.get('/contact-messages', getContactFormMessages);
 router.patch('/contact-messages/:id', updateContactFormMessage);
+router.post('/contact-messages/:id/reply', replyContactFormMessage);
 
 router.get('/dropdown-options', adminListOptions);
 router.post('/dropdown-options', adminCreateOption);

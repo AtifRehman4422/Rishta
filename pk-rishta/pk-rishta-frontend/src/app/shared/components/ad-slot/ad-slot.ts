@@ -31,7 +31,7 @@ declare global {
       } @else {
         <div class="ad-placeholder" [class.vertical]="format === 'vertical'">
           <span>Ad space</span>
-          <small>AdSense approve hone ke baad yahan ad aayega</small>
+          <small>Ads will appear here after AdSense is approved</small>
         </div>
       }
     </div>

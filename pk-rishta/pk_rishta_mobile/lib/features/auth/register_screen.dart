@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/validation.dart';
 import '../../core/widgets/auth_backdrop.dart';
 import '../../core/widgets/fade_slide.dart';
 import '../../core/widgets/primary_button.dart';
@@ -300,15 +301,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   textCapitalization: TextCapitalization.words,
                   decoration: AuthFieldDecoration.soft(
                     label: 'Full name *',
-                    hint: 'e.g. Ahmed Khan',
+                    hint: 'Enter full name',
                     prefixIcon: const Icon(Icons.person_outline_rounded),
                   ),
-                  validator: (value) {
-                    final v = value?.trim() ?? '';
-                    if (v.isEmpty) return 'Required';
-                    if (v.length < 2) return 'Enter full name';
-                    return null;
-                  },
+                  validator: (value) => validateName(value, 'Full name'),
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
@@ -351,8 +347,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     label: 'Email *',
                     prefixIcon: const Icon(Icons.mail_outline_rounded),
                   ),
-                  validator: (value) =>
-                      value == null || !value.contains('@') ? 'Enter a valid email' : null,
+                  validator: (value) => validateEmail(value),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -363,14 +358,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     hint: '+92 300 1234567',
                     prefixIcon: const Icon(Icons.phone_outlined),
                   ),
-                  validator: (value) {
-                    final v = value?.trim() ?? '';
-                    if (v.isEmpty) return 'Phone number is required';
-                    if (v.replaceAll(RegExp(r'[\s()-]'), '').length < 10) {
-                      return 'Enter a valid phone number';
-                    }
-                    return null;
-                  },
+                  validator: (value) => validatePhone(value, required: true),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -378,7 +366,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscure,
                   decoration: AuthFieldDecoration.soft(
                     label: 'Password *',
-                    helperText: 'At least 8 characters',
+                    helperText: 'At least 8 characters, letters & numbers',
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
                       onPressed: () => setState(() => _obscure = !_obscure),
@@ -387,8 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                   ),
-                  validator: (value) =>
-                      value == null || value.length < 8 ? 'Minimum 8 characters' : null,
+                  validator: (value) => validatePassword(value),
                 ),
                 const SizedBox(height: 24),
                 _submitting

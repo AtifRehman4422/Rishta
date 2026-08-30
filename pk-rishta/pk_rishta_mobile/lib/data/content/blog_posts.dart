@@ -28,22 +28,22 @@ class BlogPost {
 
 const blogPosts = [
   BlogPost(
-    title: 'How to Find the Right Rishta in Pakistan — A Complete Guide',
+    title: 'How to Find the Right Match in Pakistan — A Complete Guide',
     excerpt:
         'Practical steps for families searching for a halal, compatible marriage partner across Pakistan and overseas.',
-    category: 'Rishta Guide',
+    category: 'Match Guide',
     author: 'PK Rishta Team',
     readMinutes: 8,
     publishedAt: '2026-06-15',
     icon: '💍',
     gradient: AppColors.weddingGradient,
     content: [
-      'Finding the right rishta is one of the most important decisions in life. In Pakistan, this journey is deeply connected to family values, faith, and cultural traditions.',
+      'Finding the right match is one of the most important decisions in life. In Pakistan, this journey is deeply connected to family values, faith, and cultural traditions.',
       'Start by discussing expectations openly with your family. Age range, education, city, sect, and lifestyle preferences should be clear before you begin searching.',
       'A complete matrimonial profile makes a strong first impression. Share accurate details about education, profession, family background, and what you are looking for.',
       'Use filters wisely on PK Rishta: search by province, city, religion, marital status, and education. Review profiles carefully for values compatibility.',
       'When you find a promising profile, request contact through the platform. Admin verification helps protect both parties.',
-      'Remember: patience and dua are part of the journey. May Allah make your search easy and blessed.',
+      'Remember: patience and prayer are part of the journey. May Allah make your search easy and blessed.',
     ],
   ),
   BlogPost(
@@ -89,7 +89,7 @@ const blogPosts = [
       colors: [Color(0xFF1E3A5F), AppColors.primary, AppColors.primaryLight],
     ),
     content: [
-      'Online rishta platforms make it easier to connect, but safety must come first.',
+      'Online matchmaking platforms make it easier to connect, but safety must come first.',
       'Never share bank details, CNIC copies, or passwords with strangers.',
       'Keep early conversations on the platform. Meet families in public or with elders present.',
       'Watch for red flags: pressure to move off-platform quickly, money requests, or inconsistent stories.',

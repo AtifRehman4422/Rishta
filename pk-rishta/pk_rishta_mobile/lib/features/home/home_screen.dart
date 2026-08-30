@@ -15,11 +15,12 @@ import '../../core/widgets/profile_access_gate.dart';
 import '../../core/widgets/profile_card.dart';
 import '../../core/widgets/urdu_text.dart';
 import '../../data/constants/profile_options.dart';
-import '../../data/mock_data.dart';
+import '../../data/content/home_content.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/models/search_filters.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../auth/register_screen.dart';
+import '../matching/matching_profiles_screen.dart';
 import '../profile/profile_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -37,11 +38,12 @@ class HomeScreen extends StatefulWidget {
   final ValueChanged<SearchFilters> onSearchWithFilters;
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   final _repo = ProfileRepository();
+  final _scrollController = ScrollController();
   List<Profile> _recent = [];
   bool _loadingRecent = true;
   String? _recentError;
@@ -49,10 +51,50 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    AuthController.instance.addListener(_onAuthChanged);
     _loadRecent();
   }
 
+  @override
+  void dispose() {
+    AuthController.instance.removeListener(_onAuthChanged);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onAuthChanged() {
+    if (!AuthController.instance.canViewProfiles) {
+      if (_recent.isNotEmpty) {
+        setState(() => _recent = []);
+      }
+      return;
+    }
+    if (_recent.isEmpty && !_loadingRecent) {
+      _loadRecent();
+    }
+  }
+
+  /// Scrolls this tab's list back to the top when its nav item is tapped.
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   Future<void> _loadRecent() async {
+    if (!AuthController.instance.canViewProfiles) {
+      if (!mounted) return;
+      setState(() {
+        _recent = [];
+        _loadingRecent = false;
+        _recentError = null;
+      });
+      return;
+    }
     setState(() {
       _loadingRecent = true;
       _recentError = null;
@@ -96,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return RefreshIndicator(
             onRefresh: _loadRecent,
             child: CustomScrollView(
+              controller: _scrollController,
               slivers: [
                 SliverToBoxAdapter(
                   child: _Hero(
@@ -124,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(child: _SectionHeader(title: 'Recent Profiles', subtitle: 'Verified rishtay — Pakistan aur overseas se', delay: 350.ms)),
+                SliverToBoxAdapter(child: _SectionHeader(title: 'Recent Profiles', subtitle: 'Verified matches from Pakistan and overseas', delay: 350.ms)),
                 SliverToBoxAdapter(
                   child: ProfileAccessGate(
                     onLogin: onLogin,
@@ -183,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Column(
                                 children: [
                                   Text(
-                                    'Apna Rishta Aaj Hi Register Karein',
+                                    'Register your profile today',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.playfairDisplay(
                                       fontSize: 24,
@@ -200,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(height: 14),
                                   const Text(
-                                    'Free profile banayein aur verified families se connect hon.',
+                                    'Create a free profile and connect with verified families.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(color: Colors.white70, height: 1.5),
                                   ),
@@ -210,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ? (AuthController.instance.canViewProfiles
                                             ? 'View Profiles'
                                             : 'Complete Your Profile')
-                                        : 'Free Profile Banayein',
+                                        : 'Create a free profile',
                                     icon: Icons.favorite_rounded,
                                     style: PrimaryButtonStyle.gold,
                                     expanded: true,
@@ -431,7 +474,7 @@ class _Hero extends StatelessWidget {
                         Icon(Icons.verified_rounded, color: AppColors.goldLight, size: 16),
                         SizedBox(width: 6),
                         Text(
-                          'Pakistan\'s Trusted Rishta Platform',
+                          'Pakistan\'s Trusted Matchmaking Platform',
                           style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -470,7 +513,7 @@ class _Hero extends StatelessWidget {
                 FadeSlide(
                   delay: 220.ms,
                   child: const Text(
-                    'Halal rishtay, verified families, aur puri Pakistan se hazaron profiles.',
+                    'Halal matches, verified families, and thousands of profiles from across Pakistan.',
                     style: TextStyle(color: Colors.white70, height: 1.5),
                   ),
                 ),
@@ -525,7 +568,11 @@ class _Hero extends StatelessWidget {
                               label: 'Matching Profiles',
                               style: PrimaryButtonStyle.gold,
                               expanded: true,
-                              onPressed: onSearch,
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const MatchingProfilesScreen(),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -642,12 +689,12 @@ class _SearchCardState extends State<_SearchCard> {
         title: _province == 'Overseas'
             ? 'Select country'
             : 'Cities in ${provinceLabel(_province)}',
-        cities: cities,
-        selected: _city,
+        cities: ['Any', ...cities],
+        selected: _city.isEmpty ? 'Any' : _city,
       ),
     );
     if (selected == null || !mounted) return;
-    setState(() => _city = selected);
+    setState(() => _city = selected == 'Any' ? '' : selected);
   }
 
   @override
@@ -655,12 +702,10 @@ class _SearchCardState extends State<_SearchCard> {
     final cities = _cityOptions;
     final cityEnabled = _province.isNotEmpty;
     final cityLabel = !cityEnabled
-        ? 'Select province first'
+        ? 'Any'
         : (_city.isNotEmpty
             ? _city
-            : (_province == 'Overseas'
-                ? 'Select country (${cities.length})'
-                : 'Select city (${cities.length})'));
+            : 'Any');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -680,7 +725,7 @@ class _SearchCardState extends State<_SearchCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '🔍 Apna Ideal Rishta Dhundhein',
+            '🔍 Find your ideal match',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 15,
@@ -691,11 +736,11 @@ class _SearchCardState extends State<_SearchCard> {
           // Gender dropdown (web parity)
           DropdownButtonFormField<String>(
             key: ValueKey('gender-$_gender'),
-            initialValue: _gender.isEmpty ? null : _gender,
+            initialValue: _gender,
             isExpanded: true,
-            hint: const Text('Gender'),
             decoration: _fieldDec,
             items: const [
+              DropdownMenuItem(value: '', child: Text('Any')),
               DropdownMenuItem(value: 'male', child: Text('Male')),
               DropdownMenuItem(value: 'female', child: Text('Female')),
             ],
@@ -705,11 +750,11 @@ class _SearchCardState extends State<_SearchCard> {
           // Province dropdown
           DropdownButtonFormField<String>(
             key: ValueKey('prov-$_province'),
-            initialValue: _province.isEmpty ? null : _province,
+            initialValue: _province,
             isExpanded: true,
-            hint: const Text('Province / Location'),
             decoration: _fieldDec,
             items: [
+              const DropdownMenuItem(value: '', child: Text('Any')),
               for (final p in pakistanProvinces)
                 DropdownMenuItem(value: p, child: Text(provinceLabel(p))),
             ],
@@ -753,7 +798,7 @@ class _SearchCardState extends State<_SearchCard> {
           ],
           const SizedBox(height: 14),
           PrimaryButton(
-            label: 'Search Rishta',
+            label: 'Search Matches',
             icon: Icons.search_rounded,
             expanded: true,
             onPressed: _submit,
@@ -886,7 +931,7 @@ class _ProfileGateCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            '💍 Start your rishta journey',
+            '💍 Start your match journey',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
           ),
           const SizedBox(height: 6),
@@ -971,7 +1016,7 @@ class _HowItWorksSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Rishta Kaise Milta Hai?',
+                  'How does a match work?',
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -1124,7 +1169,7 @@ class _TestimonialsSection extends StatelessWidget {
                         const Text('✦ 💑 ✦', style: TextStyle(color: AppColors.goldLight, fontSize: 18)),
                         const SizedBox(height: 8),
                         Text(
-                          'Khushgawar Rishtay',
+                          'Happy Matches',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
                         ),
                         const SizedBox(height: 6),

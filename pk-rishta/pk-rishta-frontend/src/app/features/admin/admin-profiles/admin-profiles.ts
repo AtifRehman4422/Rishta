@@ -43,6 +43,8 @@ import { AdminService } from '../../../core/services/admin.service';
                 <th>City</th>
                 <th>Education</th>
                 <th>Verified</th>
+                <th>Rating</th>
+                <th>Send slots</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -65,6 +67,33 @@ import { AdminService } from '../../../core/services/admin.service';
                       <button class="btn btn-primary btn-sm" (click)="verify(p)">Verify</button>
                     }
                   </td>
+                  <td>
+                    <select
+                      class="form-select rating-select"
+                      [name]="'rating-' + p.id"
+                      [ngModel]="p.admin_rating != null ? '' + p.admin_rating : ''"
+                      (ngModelChange)="rate(p, $event)"
+                    >
+                      <option value="">Rate</option>
+                      <option value="5">★★★★★ 5</option>
+                      <option value="4">★★★★☆ 4</option>
+                      <option value="3">★★★☆☆ 3</option>
+                      <option value="2">★★☆☆☆ 2</option>
+                      <option value="1">★☆☆☆☆ 1</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      class="form-select slots-select"
+                      [name]="'slots-' + p.id"
+                      [ngModel]="'' + (p.contact_request_limit || 3)"
+                      (ngModelChange)="setSlots(p, $event)"
+                    >
+                      @for (n of requestSlotOptions; track n) {
+                        <option [value]="n">{{ n }}{{ n === 3 ? ' (default)' : '' }}</option>
+                      }
+                    </select>
+                  </td>
                   <td class="actions">
                     <a [routerLink]="['/profile', p.id, 'edit']" class="btn btn-outline btn-sm">Edit</a>
                     <button class="btn btn-danger btn-sm" (click)="deleteProfile(p)">Delete</button>
@@ -72,7 +101,7 @@ import { AdminService } from '../../../core/services/admin.service';
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="7" class="empty-row">No profiles found.</td>
+                  <td colspan="9" class="empty-row">No profiles found.</td>
                 </tr>
               }
             </tbody>
@@ -132,6 +161,8 @@ import { AdminService } from '../../../core/services/admin.service';
     }
     .page-btn { min-width: 2.25rem; }
     .page-ellipsis { padding: 0 0.35rem; color: var(--text-muted); }
+    .rating-select { min-width: 132px; padding: 0.35rem 0.5rem; font-size: 0.85rem; }
+    .slots-select { min-width: 108px; padding: 0.35rem 0.5rem; font-size: 0.85rem; }
   `],
 })
 export class AdminProfilesComponent implements OnInit {
@@ -139,6 +170,7 @@ export class AdminProfilesComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   readonly pageSize = 20;
+  readonly requestSlotOptions = [3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30];
 
   profiles = signal<Profile[]>([]);
   loading = signal(true);
@@ -197,6 +229,26 @@ export class AdminProfilesComponent implements OnInit {
   verify(p: Profile): void {
     this.adminService.verifyProfile(p.id).subscribe({
       next: () => this.profiles.update((list) => list.map((x) => x.id === p.id ? { ...x, is_verified: true } : x)),
+    });
+  }
+
+  rate(p: Profile, value: number | string): void {
+    const rating = value === '' || value == null ? null : Number(value);
+    this.adminService.rateProfile(p.id, rating).subscribe({
+      next: (res) => this.profiles.update((list) => list.map((x) =>
+        x.id === p.id ? { ...x, admin_rating: res.data?.admin_rating ?? rating } : x
+      )),
+    });
+  }
+
+  setSlots(p: Profile, value: number | string): void {
+    const limit = Number(value) || 3;
+    this.adminService.setRequestLimit(p.id, limit).subscribe({
+      next: (res) => this.profiles.update((list) => list.map((x) =>
+        x.id === p.id
+          ? { ...x, contact_request_limit: res.data?.contact_request_limit ?? (limit === 3 ? null : limit) }
+          : x
+      )),
     });
   }
 

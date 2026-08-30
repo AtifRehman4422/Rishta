@@ -10,7 +10,7 @@ import { ProfileAvatarComponent } from '../../shared/components/profile-avatar/p
 
 type RequestTab = 'all' | 'pending' | 'approved' | 'rejected';
 type ContactView = 'sent' | 'received';
-type ComplaintTab = 'filed' | 'against_me';
+type ComplaintTab = 'filed' | 'support';
 type MainSection = 'contact' | 'complaints';
 
 @Component({
@@ -57,7 +57,7 @@ type MainSection = 'contact' | 'complaints';
             </span>
             <div class="hero-text">
               <h3>Complaints</h3>
-              <p>{{ filedComplaints().length + againstComplaints().length }} total complaints</p>
+              <p>{{ filedComplaints().length + supportComplaints().length }} total</p>
               <span class="hero-cta">View complaints →</span>
             </div>
           </div>
@@ -159,6 +159,20 @@ type MainSection = 'contact' | 'complaints';
                       } @else if (!incomingLocked() && item.status === 'rejected' && item.admin_message) {
                         <p class="reject-reason"><strong>Declined:</strong> {{ item.admin_message }}</p>
                       }
+                      @if (!incomingLocked() && item.status === 'approved' && (!item.expires_at || !isExpired(item.expires_at))) {
+                        @if (item.contacts?.length) {
+                          <div class="contact-numbers" style="margin-top: 0.5rem;">
+                            @for (c of item.contacts; track c.id || c.number) {
+                              <a [href]="contactLink(c)" class="contact-chip">
+                                {{ c.type === 'whatsapp' ? 'WhatsApp' : 'Phone' }}: {{ c.number }}
+                              </a>
+                            }
+                          </div>
+                        }
+                        <button class="btn btn-danger btn-sm" style="margin-top: 0.5rem;" (click)="cancelSent(item.id)" [disabled]="cancellingId() === item.id">
+                          {{ cancellingId() === item.id ? 'Cancelling...' : '✕ Cancel Connection' }}
+                        </button>
+                      }
                     </div>
                     <span class="badge" [class]="'badge-' + item.status">{{ item.status }}</span>
                   </div>
@@ -213,8 +227,8 @@ type MainSection = 'contact' | 'complaints';
                   @if ((item.status === 'rejected' || item.status === 'expired') && item.admin_message) {
                     <p class="reject-reason"><strong>{{ item.status === 'expired' ? 'Expired' : 'Rejected' }}:</strong> {{ item.admin_message }}</p>
                   }
-                  @if (item.status === 'approved' && item.expires_at && !isExpired(item.expires_at)) {
-                    <p class="approve-note">Contact visible until {{ formatDate(item.expires_at) }}</p>
+                  @if (item.status === 'approved' && (!item.expires_at || !isExpired(item.expires_at))) {
+                    <p class="approve-note">Contact visible — both parties can see each other's numbers</p>
                     @if (item.contacts?.length) {
                       <div class="contact-numbers">
                         @for (c of item.contacts; track c.id || c.number) {
@@ -224,6 +238,9 @@ type MainSection = 'contact' | 'complaints';
                         }
                       </div>
                     }
+                    <button class="btn btn-danger btn-sm" style="margin-top: 0.5rem;" (click)="cancelSent(item.id)" [disabled]="cancellingId() === item.id">
+                      {{ cancellingId() === item.id ? 'Cancelling...' : '✕ Cancel Connection' }}
+                    </button>
                   } @else if (item.status === 'approved' && item.expires_at && isExpired(item.expires_at)) {
                     <p class="approve-note expired-note">Access expired on {{ formatDate(item.expires_at) }}</p>
                   }
@@ -243,17 +260,17 @@ type MainSection = 'contact' | 'complaints';
           <button type="button" class="tab-btn" [class.active]="complaintTab() === 'filed'" (click)="complaintTab.set('filed')">
             My Complaints <span class="tab-count">{{ filedComplaints().length }}</span>
           </button>
-          <button type="button" class="tab-btn tab-btn--against" [class.active]="complaintTab() === 'against_me'" (click)="complaintTab.set('against_me')">
-            Against Me <span class="tab-count">{{ againstComplaints().length }}</span>
+          <button type="button" class="tab-btn" [class.active]="complaintTab() === 'support'" (click)="complaintTab.set('support')">
+            Admin Messages <span class="tab-count">{{ supportComplaints().length }}</span>
           </button>
         </div>
 
         @if (!activeComplaints().length) {
           <div class="hub-empty">
             @if (complaintTab() === 'filed') {
-              <p>Aap ne abhi koi complaint nahi ki.</p>
+              <p>You have not filed any complaints yet.</p>
             } @else {
-              <p>Aap ke khilaf koi complaint nahi.</p>
+              <p>No messages from PK Rishta Admin yet.</p>
             }
           </div>
         } @else {
@@ -263,11 +280,12 @@ type MainSection = 'contact' | 'complaints';
                 <ng-container
                   *ngTemplateOutlet="complaintTpl; context: {
                     $implicit: c,
-                    otherLabel: complaintTab() === 'filed' ? 'Against' : 'Reporter',
+                    isSupport: complaintTab() === 'support',
+                    otherLabel: complaintTab() === 'filed' ? 'Against' : 'From',
                     otherName: complaintTab() === 'filed'
                       ? c.reported_first_name + ' ' + c.reported_last_name
-                      : c.reporter_first_name + ' ' + c.reporter_last_name,
-                    otherId: complaintTab() === 'filed' ? c.reported_profile_id : c.reporter_profile_id
+                      : 'PK Rishta Admin',
+                    otherId: complaintTab() === 'filed' ? c.reported_profile_id : null
                   }"
                 />
               </div>
@@ -284,20 +302,24 @@ type MainSection = 'contact' | 'complaints';
       }
     </div>
 
-    <ng-template #complaintTpl let-c let-otherLabel="otherLabel" let-otherName="otherName" let-otherId="otherId">
+    <ng-template #complaintTpl let-c let-otherLabel="otherLabel" let-otherName="otherName" let-otherId="otherId" let-isSupport="isSupport">
       <div class="complaint-header">
         <span class="badge" [class]="'badge-' + c.status">{{ c.status }}</span>
-        <span class="complaint-category">{{ formatCategory(c.category) }}</span>
+        <span class="complaint-category">{{ isSupport ? 'PK Rishta Support' : formatCategory(c.category) }}</span>
         <span class="complaint-date">{{ formatDate(c.created_at) }}</span>
       </div>
       <p class="complaint-party">
         <strong>{{ otherLabel }}:</strong>
-        <a [routerLink]="['/profile', otherId]">{{ otherName }}</a>
+        @if (otherId) {
+          <a [routerLink]="['/profile', otherId]">{{ otherName }}</a>
+        } @else {
+          <span>{{ otherName }}</span>
+        }
       </p>
       <div class="message-thread">
         @for (msg of c.messages || []; track msg.id) {
           <div class="message-bubble" [class]="'msg-' + msg.sender_role">
-            <span class="msg-role">{{ roleLabel(msg.sender_role) }}</span>
+            <span class="msg-role">{{ roleLabel(msg.sender_role, isSupport) }}</span>
             <p>{{ msg.message }}</p>
             <span class="msg-time">{{ formatDate(msg.created_at) }}</span>
           </div>
@@ -309,7 +331,7 @@ type MainSection = 'contact' | 'complaints';
             class="form-textarea"
             [(ngModel)]="replyText[c.id]"
             rows="2"
-            placeholder="Apna jawab likhein..."
+            placeholder="Write your reply..."
           ></textarea>
           <button
             type="button"
@@ -649,7 +671,7 @@ export class DashboardComponent implements OnInit {
   incomingLocked = signal(false);
   pendingCount = signal(0);
   filedComplaints = signal<Complaint[]>([]);
-  againstComplaints = signal<Complaint[]>([]);
+  supportComplaints = signal<Complaint[]>([]);
   requestTab = signal<RequestTab>('all');
   contactView = signal<ContactView>('sent');
   complaintTab = signal<ComplaintTab>('filed');
@@ -657,6 +679,7 @@ export class DashboardComponent implements OnInit {
   replying = signal(false);
   respondingId = signal<string | null>(null);
   declineId = signal<string | null>(null);
+  cancellingId = signal<string | null>(null);
   declineReason = '';
   complaintMessage = signal('');
   complaintError = signal(false);
@@ -690,7 +713,7 @@ export class DashboardComponent implements OnInit {
   });
 
   activeComplaints = computed(() =>
-    this.complaintTab() === 'filed' ? this.filedComplaints() : this.againstComplaints()
+    this.complaintTab() === 'filed' ? this.filedComplaints() : this.supportComplaints()
   );
 
   ngOnInit(): void {
@@ -761,11 +784,29 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  cancelSent(id: string): void {
+    this.cancellingId.set(id);
+    this.profileService.cancelContactRequest(id).subscribe({
+      next: () => {
+        this.cancellingId.set(null);
+        this.complaintMessage.set('Connection cancelled');
+        this.complaintError.set(false);
+        this.loadSentRequests();
+        this.loadIncomingRequests();
+      },
+      error: (err) => {
+        this.cancellingId.set(null);
+        this.complaintMessage.set(err.error?.message || 'Failed to cancel');
+        this.complaintError.set(true);
+      },
+    });
+  }
+
   loadComplaints(): void {
     this.profileService.getMyComplaints().subscribe({
       next: (res) => {
-        this.filedComplaints.set(res.data.filed);
-        this.againstComplaints.set(res.data.against_me);
+        this.filedComplaints.set(res.data.filed || []);
+        this.supportComplaints.set(res.data.support || []);
       },
     });
   }
@@ -801,10 +842,11 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  roleLabel(role: string): string {
+  roleLabel(role: string, isSupport = false): string {
     if (role === 'admin') return 'Admin';
-    if (role === 'reporter') return 'Reporter';
-    if (role === 'reported') return 'Reported User';
+    if (isSupport) return 'You';
+    if (role === 'reporter') return 'You';
+    if (role === 'reported') return 'You';
     return role;
   }
 
@@ -819,7 +861,8 @@ export class DashboardComponent implements OnInit {
     return item.status;
   }
 
-  isExpired(expiresAt: string): boolean {
+  isExpired(expiresAt: string | undefined): boolean {
+    if (!expiresAt) return false;
     return new Date(expiresAt) <= new Date();
   }
 

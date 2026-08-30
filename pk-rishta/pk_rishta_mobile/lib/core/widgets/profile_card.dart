@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../state/auth_controller.dart';
+import '../state/favorites_controller.dart';
 import '../theme/app_colors.dart';
 import '../../data/models/profile_model.dart';
+import '../../features/auth/login_screen.dart';
 
 class ProfileCard extends StatelessWidget {
   const ProfileCard({
@@ -16,6 +19,31 @@ class ProfileCard extends StatelessWidget {
   final Profile profile;
   final double width;
   final VoidCallback? onTap;
+
+  Future<void> _onHeartPressed(BuildContext context) async {
+    final auth = AuthController.instance;
+    if (!auth.isLoggedIn) {
+      final ok = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      if (ok != true) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Login to save profiles to favorites'),
+              backgroundColor: Color(0xFF8A4B4B),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+      if (!context.mounted) return;
+    }
+    final result = await FavoritesController.instance.toggle(profile.id);
+    if (!context.mounted) return;
+    showFavoriteSnackBar(context, result);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +100,56 @@ class ProfileCard extends StatelessWidget {
                         ),
                       ),
                       Positioned(
+                        top: 8,
+                        left: 8,
+                        child: ListenableBuilder(
+                          listenable: FavoritesController.instance,
+                          builder: (context, _) {
+                            final favorite =
+                                FavoritesController.instance.isFavorite(profile.id);
+                            return Material(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () => _onHeartPressed(context),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(7),
+                                  child: Icon(
+                                    favorite
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    size: 20,
+                                    color: favorite ? const Color(0xFFFF5D7A) : Colors.white,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      if (AuthController.instance.isAdmin &&
+                          profile.adminRating != null &&
+                          profile.adminRating! > 0)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(
+                              profile.adminRating!.clamp(1, 5),
+                              (_) => const Icon(
+                                Icons.star_rounded,
+                                size: 18,
+                                color: Color(0xFFFFD700),
+                                shadows: [
+                                  Shadow(color: Color(0x99000000), blurRadius: 4),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      Positioned(
                         top: 10,
                         right: 10,
                         child: Container(
@@ -100,6 +178,36 @@ class ProfileCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (profile.matchScore != null)
+                        Positioned(
+                          bottom: 8,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                gradient: AppColors.weddingGradient,
+                                borderRadius: BorderRadius.circular(999),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '${profile.matchScore}% match',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -138,7 +246,7 @@ class ProfileCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        profile.education ?? profile.profession ?? 'Rishta profile',
+                        profile.education ?? profile.profession ?? 'Match profile',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

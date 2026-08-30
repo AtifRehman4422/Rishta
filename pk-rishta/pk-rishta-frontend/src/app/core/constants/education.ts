@@ -7,6 +7,7 @@ export const EDUCATION_OPTIONS = [
   'Higher Secondary / Intermediate / College',
   'Certificate Course',
   'Diploma',
+  'Hafiz-e-Quran',
   'Associate Degree',
   "Bachelor's Degree",
   'Postgraduate Diploma',

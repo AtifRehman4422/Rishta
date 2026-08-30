@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, tap, catchError, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse, AuthResponse, User } from '../models';
@@ -17,12 +17,18 @@ export class AuthService {
   readonly isAdmin = signal(this.currentUser()?.role === 'admin');
 
   private loadUser(): User | null {
-    const data = localStorage.getItem('pk_user');
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem('pk_user');
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
   }
 
   getToken(): string | null {
-    return localStorage.getItem('pk_token');
+    const token = localStorage.getItem('pk_token');
+    if (!token || token === 'null' || token === 'undefined') return null;
+    return token;
   }
 
   /** Creates account + sends OTP (does not log in until OTP is verified). */
@@ -63,19 +69,41 @@ export class AuthService {
   getMe(): Observable<ApiResponse<User>> {
     return this.http.get<ApiResponse<User>>(`${this.baseUrl}/auth/me`).pipe(
       tap((res) => {
+        if (!res.data) return;
         this.currentUser.set(res.data);
         localStorage.setItem('pk_user', JSON.stringify(res.data));
+        this.isLoggedIn.set(true);
         this.isAdmin.set(res.data.role === 'admin');
       })
     );
   }
 
-  logout(): void {
+  /** Confirms the stored token with the server. Local role is never trusted alone. */
+  restoreSession(): Observable<User | null> {
+    const token = this.getToken();
+    if (!token) {
+      this.clearSession();
+      return of(null);
+    }
+    return this.getMe().pipe(
+      map((res) => res.data ?? null),
+      catchError(() => {
+        this.clearSession();
+        return of(null);
+      }),
+    );
+  }
+
+  clearSession(): void {
     localStorage.removeItem('pk_token');
     localStorage.removeItem('pk_user');
     this.currentUser.set(null);
     this.isLoggedIn.set(false);
     this.isAdmin.set(false);
+  }
+
+  logout(): void {
+    this.clearSession();
     this.router.navigate(['/']);
   }
 

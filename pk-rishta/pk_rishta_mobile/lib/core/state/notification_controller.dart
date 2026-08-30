@@ -24,9 +24,9 @@ class NotificationController extends ChangeNotifier {
 
   void _onAuthChanged() {
     if (AuthController.instance.isLoggedIn) {
-      refresh().catchError((_) {});
+      Future.microtask(() => refresh().catchError((_) {}));
     } else {
-      clear();
+      Future.microtask(clear);
     }
   }
 

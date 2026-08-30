@@ -1,6 +1,8 @@
 const pool = require('../db');
 const { addComplaintMessage, attachMessagesToComplaints } = require('../utils/complaintMessages');
+const { createNotification, getUserIdByProfileId } = require('../utils/notifications');
 const { pakistanToday } = require('./visitController');
+const { sendMail } = require('../utils/mailer');
 
 async function getDashboardStats(req, res) {
   try {
@@ -13,8 +15,7 @@ async function getDashboardStats(req, res) {
         (SELECT COUNT(*) FROM profiles) as total_profiles,
         (SELECT COUNT(*) FROM profiles WHERE is_verified = true) as verified_profiles,
         (SELECT COUNT(*) FROM profiles WHERE is_verified = false) as unverified_profiles,
-        (SELECT COUNT(*) FROM interests) as total_interests,
-        (SELECT COUNT(*) FROM interests WHERE status = 'pending') as pending_interests,
+        (SELECT COUNT(*) FROM contact_access_requests) as total_contact_requests,
         (SELECT COUNT(*) FROM contact_access_requests WHERE status = 'pending') as pending_contact_requests,
         (SELECT COUNT(*) FROM complaints WHERE status = 'pending') as pending_complaints,
         (SELECT COUNT(*) FROM contact_form_messages WHERE status = 'new') as new_contact_messages,
@@ -163,7 +164,10 @@ async function verifyProfile(req, res) {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `UPDATE profiles SET is_verified = true, updated_at = NOW() WHERE id = $1 RETURNING id, first_name, last_name, is_verified`,
+      `UPDATE profiles
+       SET is_verified = true, visibility = 'public', updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, first_name, last_name, is_verified, visibility`,
       [id]
     );
 
@@ -177,6 +181,104 @@ async function verifyProfile(req, res) {
     );
 
     res.json({ success: true, data: result.rows[0], message: 'Profile verified' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+async function rateProfile(req, res) {
+  try {
+    const { id } = req.params;
+    const raw = req.body?.rating;
+    const rating = raw === null || raw === undefined || raw === '' ? null : parseInt(raw, 10);
+    if (rating !== null && (Number.isNaN(rating) || rating < 1 || rating > 5)) {
+      return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
+    }
+
+    const result = await pool.query(
+      `UPDATE profiles SET admin_rating = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, first_name, last_name, is_verified, admin_rating`,
+      [rating, id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    await pool.query(
+      `INSERT INTO admin_logs (admin_id, action, target_type, target_id, details)
+       VALUES ($1, 'rate_profile', 'profile', $2, $3)`,
+      [req.user.id, id, JSON.stringify({ admin_rating: rating })]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: rating ? `Rating set to ${rating}/5` : 'Rating cleared',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+const DEFAULT_REQUEST_LIMIT = parseInt(process.env.CONTACT_REQUEST_PENDING_LIMIT || '3', 10);
+const MAX_REQUEST_LIMIT = 30;
+
+async function setContactRequestLimit(req, res) {
+  try {
+    const { id } = req.params;
+    const raw = req.body?.limit;
+    let limit = raw === null || raw === undefined || raw === '' ? null : parseInt(raw, 10);
+    if (limit !== null && (Number.isNaN(limit) || limit < DEFAULT_REQUEST_LIMIT || limit > MAX_REQUEST_LIMIT)) {
+      return res.status(400).json({
+        success: false,
+        message: `Limit must be between ${DEFAULT_REQUEST_LIMIT} and ${MAX_REQUEST_LIMIT}`,
+      });
+    }
+    if (limit === DEFAULT_REQUEST_LIMIT) limit = null;
+
+    const result = await pool.query(
+      `UPDATE profiles SET contact_request_limit = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, user_id, first_name, last_name, contact_request_limit`,
+      [limit, id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
+    const row = result.rows[0];
+    const effective = row.contact_request_limit || DEFAULT_REQUEST_LIMIT;
+
+    await pool.query(
+      `INSERT INTO admin_logs (admin_id, action, target_type, target_id, details)
+       VALUES ($1, 'set_request_limit', 'profile', $2, $3)`,
+      [req.user.id, id, JSON.stringify({ contact_request_limit: effective })]
+    );
+
+    await createNotification({
+      userId: row.user_id,
+      type: 'contact_request_limit',
+      title: effective > DEFAULT_REQUEST_LIMIT ? 'More contact requests allowed' : 'Contact request limit updated',
+      body: effective > DEFAULT_REQUEST_LIMIT
+        ? `You can now keep up to ${effective} pending contact requests.`
+        : `Your pending contact request limit is ${DEFAULT_REQUEST_LIMIT}.`,
+      link: '/dashboard',
+      relatedId: row.id,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: row.id,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        contact_request_limit: row.contact_request_limit,
+      },
+      message: `Request slots set to ${effective}`,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -316,7 +418,7 @@ async function getComplaints(req, res) {
     const params = [];
     let idx = 1;
 
-    if (status) {
+    if (status && status !== 'all') {
       conditions.push(`c.status = $${idx++}`);
       params.push(status);
     }
@@ -398,10 +500,6 @@ async function reviewComplaint(req, res) {
       return res.status(404).json({ success: false, message: 'Pending complaint not found' });
     }
 
-    if (admin_notes?.trim()) {
-      await addComplaintMessage(id, 'admin', req.user.id, admin_notes.trim());
-    }
-
     await pool.query(
       `INSERT INTO admin_logs (admin_id, action, target_type, target_id, details)
        VALUES ($1, 'review_complaint', 'complaint', $2, $3)`,
@@ -417,13 +515,21 @@ async function reviewComplaint(req, res) {
 async function sendComplaintMessage(req, res) {
   try {
     const { id } = req.params;
-    const { message } = req.body;
+    const { message, recipient } = req.body;
+    const recipientRole = recipient === 'reported' ? 'reported' : recipient === 'reporter' ? 'reporter' : null;
 
     if (!message?.trim()) {
       return res.status(400).json({ success: false, message: 'Message is required' });
     }
+    if (!recipientRole) {
+      return res.status(400).json({ success: false, message: 'Select who to chat with: reporter or reported user' });
+    }
 
-    const exists = await pool.query('SELECT id, status FROM complaints WHERE id = $1', [id]);
+    const exists = await pool.query(
+      `SELECT c.id, c.status, c.reporter_profile_id, c.reported_profile_id
+       FROM complaints c WHERE c.id = $1`,
+      [id]
+    );
     if (!exists.rows.length) {
       return res.status(404).json({ success: false, message: 'Complaint not found' });
     }
@@ -432,8 +538,25 @@ async function sendComplaintMessage(req, res) {
       return res.status(400).json({ success: false, message: 'Complaint is closed' });
     }
 
-    const saved = await addComplaintMessage(id, 'admin', req.user.id, message.trim());
-    res.json({ success: true, data: saved, message: 'Message sent to both parties' });
+    const saved = await addComplaintMessage(id, 'admin', req.user.id, message.trim(), recipientRole);
+
+    const targetProfileId = recipientRole === 'reporter'
+      ? exists.rows[0].reporter_profile_id
+      : exists.rows[0].reported_profile_id;
+    const targetUserId = await getUserIdByProfileId(targetProfileId);
+    await createNotification({
+      userId: targetUserId,
+      type: 'complaint_message',
+      title: 'Message from PK Rishta Admin',
+      body: recipientRole === 'reporter'
+        ? 'Admin replied to your complaint. Open My Activity to continue the chat.'
+        : 'PK Rishta Admin sent you a private message. Open My Activity to reply.',
+      link: '/dashboard',
+      relatedId: id,
+    });
+
+    const who = recipientRole === 'reporter' ? 'the reporter' : 'the reported user';
+    res.json({ success: true, data: saved, message: `Message sent to ${who} only` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -533,9 +656,68 @@ async function updateContactFormMessage(req, res) {
   }
 }
 
+async function replyContactFormMessage(req, res) {
+  try {
+    const { id } = req.params;
+    const body = String(req.body?.message || '').trim();
+    if (body.length < 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type a reply of at least 5 characters',
+      });
+    }
+
+    const existing = await pool.query(
+      `SELECT id, name, email, subject, message, admin_notes
+       FROM contact_form_messages WHERE id = $1`,
+      [id]
+    );
+    if (!existing.rows.length) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    const row = existing.rows[0];
+    const subjectLabel = row.subject || 'your message';
+    await sendMail({
+      to: row.email,
+      subject: `Re: ${subjectLabel} — PK Rishta`,
+      text: `Dear ${row.name},\n\n${body}\n\n— PK Rishta Admin\nhttps://pkrishta.com`,
+      html: `
+        <div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#fff8f3;border:1px solid #f0ddd0;border-radius:16px;">
+          <h2 style="color:#9B1B30;margin:0 0 12px;">PK Rishta</h2>
+          <p style="color:#2D1B1B;">Dear ${row.name},</p>
+          <p style="color:#2D1B1B;white-space:pre-wrap;line-height:1.6;">${body.replace(/</g, '&lt;')}</p>
+          <p style="color:#7A6363;margin-top:24px;">— PK Rishta Admin</p>
+        </div>
+      `,
+    });
+
+    const stamp = new Date().toISOString();
+    const notes = [row.admin_notes, req.body?.admin_notes, `Replied by email (${stamp}):\n${body}`]
+      .map((v) => String(v || '').trim())
+      .filter(Boolean)
+      .join('\n\n');
+
+    const result = await pool.query(
+      `UPDATE contact_form_messages
+       SET status = 'replied', admin_notes = $1, updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [notes || null, id]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: `Reply sent to ${row.email}`,
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   getDashboardStats, getAllUsers, toggleUserStatus,
-  getAllProfiles, verifyProfile, deleteProfile,
+  getAllProfiles, verifyProfile, rateProfile, setContactRequestLimit, deleteProfile,
   getContactRequests, reviewContactRequest, getComplaints, reviewComplaint, sendComplaintMessage,
-  getContactFormMessages, updateContactFormMessage,
+  getContactFormMessages, updateContactFormMessage, replyContactFormMessage,
 };

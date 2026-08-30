@@ -50,6 +50,7 @@ export const routes: Routes = [
       { path: 'profile/:id', loadComponent: () => import('./features/profile-detail/profile-detail').then((m) => m.ProfileDetailComponent) },
       { path: 'profile/:id/edit', canActivate: [adminGuard], loadComponent: () => import('./features/my-profile/my-profile').then((m) => m.MyProfileComponent) },
       { path: 'dashboard', canActivate: [authGuard], loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.DashboardComponent) },
+      { path: 'favorites', canActivate: [authGuard], loadComponent: () => import('./features/favorites/favorites').then((m) => m.FavoritesComponent) },
       { path: 'my-profile', canActivate: [authGuard], loadComponent: () => import('./features/my-profile/my-profile').then((m) => m.MyProfileComponent) },
     ],
   },

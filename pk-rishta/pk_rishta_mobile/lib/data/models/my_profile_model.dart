@@ -1,3 +1,17 @@
+List<String> parseMultiSelect(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return [];
+  return raw
+      .split(',')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty && e != '---')
+      .toList();
+}
+
+String joinMultiSelect(List<String> values) {
+  final cleaned = values.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  return cleaned.isEmpty ? '' : cleaned.join(', ');
+}
+
 class MyProfileData {
   MyProfileData({
     this.id,
@@ -23,6 +37,7 @@ class MyProfileData {
     this.country = 'Pakistan',
     this.education = '',
     this.profession = '',
+    this.hafizQuran = '',
     this.incomeRange = '',
     this.aboutMe = '',
     this.familyDetails = '',
@@ -32,14 +47,23 @@ class MyProfileData {
     this.abroadCountry = '',
     this.abroadHouseOwnLocation = '',
     this.abroadHouseRentLocation = '',
+    this.profilePhoto = '',
     this.isProfileComplete = false,
     this.contacts = const [],
     this.partnerMinAge,
     this.partnerMaxAge,
-    this.partnerCity = '',
-    this.partnerProvince = '',
-    this.partnerEducation = '',
+    this.partnerMinHeightCm,
+    this.partnerMaxHeightCm,
+    this.partnerReligion = '',
+    this.partnerSect = '',
+    this.partnerCastes = const [],
+    this.partnerStates = const [],
+    this.partnerCountries = const [],
+    this.partnerCities = const [],
+    this.partnerEducations = const [],
+    this.partnerProfessions = const [],
     this.partnerMaritalStatus = '',
+    this.partnerRequirementsNotes = '',
   });
 
   String? id;
@@ -49,7 +73,7 @@ class MyProfileData {
   String gender;
   String dateOfBirth;
   int? heightCm;
-  int? weightKg;
+  num? weightKg;
   String maritalStatus;
   String color;
   String guardianType;
@@ -65,6 +89,7 @@ class MyProfileData {
   String country;
   String education;
   String profession;
+  String hafizQuran;
   String incomeRange;
   String aboutMe;
   String familyDetails;
@@ -74,14 +99,23 @@ class MyProfileData {
   String abroadCountry;
   String abroadHouseOwnLocation;
   String abroadHouseRentLocation;
+  String profilePhoto;
   bool isProfileComplete;
   List<ProfileContact> contacts;
   int? partnerMinAge;
   int? partnerMaxAge;
-  String partnerCity;
-  String partnerProvince;
-  String partnerEducation;
+  int? partnerMinHeightCm;
+  int? partnerMaxHeightCm;
+  String partnerReligion;
+  String partnerSect;
+  List<String> partnerCastes;
+  List<String> partnerStates;
+  List<String> partnerCountries;
+  List<String> partnerCities;
+  List<String> partnerEducations;
+  List<String> partnerProfessions;
   String partnerMaritalStatus;
+  String partnerRequirementsNotes;
 
   String get fullName {
     final name = '$firstName $lastName'.trim();
@@ -115,6 +149,12 @@ class MyProfileData {
     return int.tryParse(v.toString());
   }
 
+  static num? _toNum(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v;
+    return num.tryParse(v.toString());
+  }
+
   static String _str(dynamic v) => v == null ? '' : v.toString();
 
   factory MyProfileData.fromJson(Map<String, dynamic> json) {
@@ -128,7 +168,7 @@ class MyProfileData {
       gender: _str(json['gender']),
       dateOfBirth: _str(json['date_of_birth']).split('T').first,
       heightCm: _toInt(json['height_cm']),
-      weightKg: _toInt(json['weight_kg']),
+      weightKg: _toNum(json['weight_kg']),
       maritalStatus: _str(json['marital_status']),
       color: _str(json['color']),
       guardianType: _str(json['guardian_type']),
@@ -144,6 +184,7 @@ class MyProfileData {
       country: _str(json['country']).isEmpty ? 'Pakistan' : _str(json['country']),
       education: _str(json['education']),
       profession: _str(json['profession']),
+      hafizQuran: _str(json['hafiz_quran']),
       incomeRange: _str(json['income_range']),
       aboutMe: _str(json['about_me']),
       familyDetails: _str(json['family_details']),
@@ -153,21 +194,31 @@ class MyProfileData {
       abroadCountry: _str(json['abroad_country']),
       abroadHouseOwnLocation: _str(json['abroad_house_own_location']),
       abroadHouseRentLocation: _str(json['abroad_house_rent_location']),
+      profilePhoto: _str(json['profile_photo']),
       isProfileComplete: json['is_profile_complete'] == true,
       contacts: contactsJson
           .map((e) => ProfileContact.fromJson(e as Map<String, dynamic>))
           .toList(),
       partnerMinAge: _toInt(prefs['min_age']),
       partnerMaxAge: _toInt(prefs['max_age']),
-      partnerCity: _str(prefs['city']),
-      partnerProvince: _str(prefs['province']),
-      partnerEducation: _str(prefs['education']),
+      partnerMinHeightCm: _toInt(prefs['min_height_cm']),
+      partnerMaxHeightCm: _toInt(prefs['max_height_cm']),
+      partnerReligion: _str(prefs['religion']),
+      partnerSect: _str(prefs['sect']),
+      partnerCastes: parseMultiSelect(_str(prefs['caste'])),
+      partnerStates: parseMultiSelect(_str(prefs['province'])),
+      partnerCountries: parseMultiSelect(_str(prefs['country'])),
+      partnerCities: parseMultiSelect(_str(prefs['city'])),
+      partnerEducations: parseMultiSelect(_str(prefs['education'])),
+      partnerProfessions: parseMultiSelect(_str(prefs['profession'])),
       partnerMaritalStatus: _str(prefs['marital_status']),
+      partnerRequirementsNotes: _str(prefs['requirements_notes']),
     );
   }
 
   Map<String, dynamic> toUpdateBody() {
     return {
+      'email': email.isEmpty ? null : email,
       'first_name': firstName,
       'last_name': lastName,
       'gender': gender,
@@ -189,6 +240,7 @@ class MyProfileData {
       'country': province == 'Overseas' ? (abroadCountry.isEmpty ? country : abroadCountry) : 'Pakistan',
       'education': education.isEmpty ? null : education,
       'profession': profession.isEmpty ? null : profession,
+      'hafiz_quran': hafizQuran.isEmpty ? null : hafizQuran,
       'income_range': incomeRange.isEmpty ? null : incomeRange,
       'about_me': aboutMe.isEmpty ? null : aboutMe,
       'family_details': familyDetails.isEmpty ? null : familyDetails,
@@ -198,6 +250,7 @@ class MyProfileData {
       'abroad_country': abroadCountry.isEmpty ? null : abroadCountry,
       'abroad_house_own_location': abroadHouseOwnLocation.isEmpty ? null : abroadHouseOwnLocation,
       'abroad_house_rent_location': abroadHouseRentLocation.isEmpty ? null : abroadHouseRentLocation,
+      'profile_photo': profilePhoto.isEmpty ? null : profilePhoto,
       'contacts': contacts
           .where((c) => c.number.trim().isNotEmpty)
           .map((c) => {'type': c.type, 'number': c.number.trim()})
@@ -205,10 +258,18 @@ class MyProfileData {
       'partner_preferences': {
         'min_age': partnerMinAge,
         'max_age': partnerMaxAge,
-        'city': partnerCity.isEmpty ? null : partnerCity,
-        'province': partnerProvince.isEmpty ? null : partnerProvince,
-        'education': partnerEducation.isEmpty ? null : partnerEducation,
+        'min_height_cm': partnerMinHeightCm,
+        'max_height_cm': partnerMaxHeightCm,
+        'religion': partnerReligion.isEmpty ? null : partnerReligion,
+        'sect': partnerSect.isEmpty ? null : partnerSect,
+        'caste': joinMultiSelect(partnerCastes).isEmpty ? null : joinMultiSelect(partnerCastes),
+        'province': joinMultiSelect(partnerStates).isEmpty ? null : joinMultiSelect(partnerStates),
+        'country': joinMultiSelect(partnerCountries).isEmpty ? null : joinMultiSelect(partnerCountries),
+        'city': joinMultiSelect(partnerCities).isEmpty ? null : joinMultiSelect(partnerCities),
+        'education': joinMultiSelect(partnerEducations).isEmpty ? null : joinMultiSelect(partnerEducations),
+        'profession': joinMultiSelect(partnerProfessions).isEmpty ? null : joinMultiSelect(partnerProfessions),
         'marital_status': partnerMaritalStatus.isEmpty ? null : partnerMaritalStatus,
+        'requirements_notes': partnerRequirementsNotes.isEmpty ? null : partnerRequirementsNotes,
       },
     };
   }

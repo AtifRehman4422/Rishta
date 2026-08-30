@@ -85,6 +85,13 @@ export class ProfileService {
     );
   }
 
+  cancelContactRequest(requestId: string): Observable<ApiResponse<ContactAccessRequest>> {
+    return this.http.patch<ApiResponse<ContactAccessRequest>>(
+      `${this.apiUrl}/contact-requests/${requestId}/cancel`,
+      {}
+    );
+  }
+
   getContactAccessStatus(profileId: string): Observable<ApiResponse<ContactAccessStatus>> {
     return this.http.get<ApiResponse<ContactAccessStatus>>(`${this.apiUrl}/contact-requests/status/${profileId}`);
   }

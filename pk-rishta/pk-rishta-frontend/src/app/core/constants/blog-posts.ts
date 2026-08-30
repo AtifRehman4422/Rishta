@@ -15,24 +15,24 @@ export interface BlogPost {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'how-to-find-right-rishta-pakistan',
-    title: 'How to Find the Right Rishta in Pakistan — A Complete Guide',
+    title: 'How to Find the Right Match in Pakistan — A Complete Guide',
     excerpt:
       'Practical steps for families and individuals searching for a halal, compatible marriage partner across Pakistan and overseas.',
-    category: 'Rishta Guide',
+    category: 'Match Guide',
     author: 'PK Rishta Team',
     readMinutes: 8,
     publishedAt: '2026-06-15',
     coverGradient: 'linear-gradient(135deg, #6B0F1A 0%, #9B1B30 50%, #C9A227 100%)',
     coverIcon: '💍',
     metaDescription:
-      'Learn how to find the right rishta in Pakistan with family involvement, profile tips, and halal matrimonial best practices.',
+      'Learn how to find the right match in Pakistan with family involvement, profile tips, and halal matrimonial best practices.',
     content: [
-      'Finding the right rishta is one of the most important decisions in life. In Pakistan, this journey is deeply connected to family values, faith, and cultural traditions. Whether you are in Karachi, Lahore, Islamabad, or living overseas, a thoughtful approach saves time and brings barakah to the process.',
+      'Finding the right match is one of the most important decisions in life. In Pakistan, this journey is deeply connected to family values, faith, and cultural traditions. Whether you are in Karachi, Lahore, Islamabad, or living overseas, a thoughtful approach saves time and brings blessing to the process.',
       'Start by discussing expectations openly with your family. Age range, education, city, sect, and lifestyle preferences should be clear before you begin searching. When everyone understands the goals, mismatched proposals are reduced and conversations stay respectful.',
       'A complete matrimonial profile makes a strong first impression. Share accurate details about education, profession, family background, and what you are looking for in a partner. Honesty builds trust — the foundation of every successful marriage.',
       'Use filters wisely on PK Rishta: search by province, city, religion, marital status, and education. Review profiles carefully and note compatibility in values, not just appearance or income.',
       'When you find a promising profile, request contact through the platform. Admin verification helps protect both parties. Meet families in a respectful setting, involve elders, and ask meaningful questions about faith, finances, and future plans.',
-      'Remember: patience and dua are part of the journey. The right rishta comes at the right time. May Allah make your search easy and blessed.',
+      'Remember: patience and prayer are part of the journey. The right match comes at the right time. May Allah make your search easy and blessed.',
     ],
   },
   {
@@ -65,7 +65,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'online-matrimonial-safety-tips',
-    title: 'Online Matrimonial Safety Tips — Protect Yourself on Rishta Platforms',
+    title: 'Online Matrimonial Safety Tips — Protect Yourself on Matchmaking Platforms',
     excerpt:
       'Stay safe while searching for marriage online: verify profiles, protect personal data, and recognize red flags.',
     category: 'Safety',
@@ -75,9 +75,9 @@ export const BLOG_POSTS: BlogPost[] = [
     coverGradient: 'linear-gradient(135deg, #1e3a5f 0%, #9B1B30 70%, #C4314E 100%)',
     coverIcon: '🛡️',
     metaDescription:
-      'Online matrimonial safety tips for Pakistan — verify profiles, avoid scams, protect personal information on rishta websites.',
+      'Online matrimonial safety tips for Pakistan — verify profiles, avoid scams, protect personal information on matchmaking websites.',
     content: [
-      'Online rishta platforms make it easier to connect across cities and countries, but safety must come first. Follow these guidelines to protect yourself and your family.',
+      'Online matchmaking platforms make it easier to connect across cities and countries, but safety must come first. Follow these guidelines to protect yourself and your family.',
       'Never share CNIC copies, bank details, or passwords with strangers. Legitimate platforms like PK Rishta use admin-verified contact requests instead of exposing numbers publicly.',
       'Be cautious of anyone who pressures you to decide quickly, asks for money, or refuses family involvement. These are common warning signs in matrimonial scams.',
       'Verify information independently. Cross-check education, profession, and family details during family meetings. Trust is earned through consistency over time.',
@@ -90,7 +90,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: 'complete-matrimonial-profile-tips',
     title: 'How to Create a Complete Matrimonial Profile That Gets Responses',
     excerpt:
-      'Profile photo, about me, partner preferences, and contact details — everything you need for a trustworthy rishta profile.',
+      'Profile photo, about me, partner preferences, and contact details — everything you need for a trustworthy matrimonial profile.',
     category: 'Profile Tips',
     author: 'PK Rishta Team',
     readMinutes: 5,
@@ -111,9 +111,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'family-role-pakistani-rishta-process',
-    title: 'The Role of Family in the Pakistani Rishta Process',
+    title: 'The Role of Family in the Pakistani Matchmaking Process',
     excerpt:
-      'Why family involvement matters, how to balance tradition with personal choice, and tips for respectful rishta meetings.',
+      'Why family involvement matters, how to balance tradition with personal choice, and tips for respectful family meetings.',
     category: 'Culture',
     author: 'PK Rishta Team',
     readMinutes: 6,
@@ -121,21 +121,21 @@ export const BLOG_POSTS: BlogPost[] = [
     coverGradient: 'linear-gradient(135deg, #5c3d1e 0%, #9B1B30 55%, #E8A0BF 100%)',
     coverIcon: '👨‍👩‍👧‍👦',
     metaDescription:
-      'Understanding family involvement in Pakistani rishta culture — traditions, meetings, and balancing personal choice with family guidance.',
+      'Understanding family involvement in Pakistani matchmaking culture — traditions, meetings, and balancing personal choice with family guidance.',
     content: [
-      'In Pakistani culture, marriage is not only between two individuals — it connects two families. Understanding this helps navigate the rishta process with wisdom and respect.',
-      'Parents and elders often bring experience, network, and dua to the search. Their involvement can filter incompatible matches and provide emotional support during a stressful time.',
+      'In Pakistani culture, marriage is not only between two individuals — it connects two families. Understanding this helps navigate the matchmaking process with wisdom and respect.',
+      'Parents and elders often bring experience, network, and prayers to the search. Their involvement can filter incompatible matches and provide emotional support during a stressful time.',
       'At the same time, the bride and groom should have a voice in the final decision. Islam emphasizes consent (ridha) from both parties. The ideal process combines family guidance with personal choice.',
-      'Rishta meetings (mulaqaat) work best when both sides prepare questions in advance, dress appropriately, and keep conversations focused on compatibility rather than material demands.',
-      'Avoid comparing multiple proposals disrespectfully or sharing private details from one meeting with another family. Confidentiality and adab reflect your family\'s character.',
+      'Family meetings work best when both sides prepare questions in advance, dress appropriately, and keep conversations focused on compatibility rather than material demands.',
+      'Avoid comparing multiple proposals disrespectfully or sharing private details from one meeting with another family. Confidentiality and good manners reflect your family\'s character.',
       'When using online platforms, involve family early. Share profiles with parents before requesting contact. This transparency prevents misunderstandings and builds trust.',
     ],
   },
   {
     slug: 'overseas-pakistanis-finding-rishta',
-    title: 'Guide for Overseas Pakistanis Finding Rishta Back Home',
+    title: 'Guide for Overseas Pakistanis Finding a Match Back Home',
     excerpt:
-      'How Pakistanis in UK, USA, UAE, and Canada can search for compatible rishtay in Pakistan with family support.',
+      'How Pakistanis in UK, USA, UAE, and Canada can search for compatible matches in Pakistan with family support.',
     category: 'Overseas',
     author: 'PK Rishta Team',
     readMinutes: 7,
@@ -143,14 +143,14 @@ export const BLOG_POSTS: BlogPost[] = [
     coverGradient: 'linear-gradient(135deg, #0f4c75 0%, #9B1B30 45%, #D4AF37 100%)',
     coverIcon: '✈️',
     metaDescription:
-      'Rishta guide for overseas Pakistanis — search profiles in Pakistan, involve family, and plan meetings for nikah across borders.',
+      'Matchmaking guide for overseas Pakistanis — search profiles in Pakistan, involve family, and plan meetings for nikah across borders.',
     content: [
-      'Millions of Pakistanis live abroad while their hearts remain connected to home. Finding a rishta across borders has unique challenges — distance, time zones, and differing expectations.',
+      'Millions of Pakistanis live abroad while their hearts remain connected to home. Finding a match across borders has unique challenges — distance, time zones, and differing expectations.',
       'Start by clarifying your long-term plan: Will your spouse relocate abroad? Will you settle in Pakistan? These answers narrow the search significantly.',
       'Use PK Rishta\'s overseas location options to register your current country while searching profiles in Pakistani cities. Families in both places can review matches together on video calls.',
       'Involve a trusted family member in Pakistan who can attend meetings on your behalf when you cannot travel immediately. Video introductions are useful, but in-person family meetings remain important before commitment.',
       'Discuss visa, financial, and cultural adjustment expectations openly. Overseas marriages succeed when both sides understand the practical realities of relocation or long-distance engagement periods.',
-      'Plan visits with enough time for multiple family meetings — not just one rushed trip. Barakah comes with patience and thoroughness.',
+      'Plan visits with enough time for multiple family meetings — not just one rushed trip. Blessing comes with patience and thoroughness.',
       'May Allah unite overseas Pakistanis with righteous partners who share their values and dreams.',
     ],
   },

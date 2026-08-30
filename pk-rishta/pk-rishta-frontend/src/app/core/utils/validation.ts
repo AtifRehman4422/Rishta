@@ -172,21 +172,16 @@ export interface RegisterFormData {
   full_name: string;
   gender: string;
   date_of_birth: string;
-  city: string;
-  province: string;
-  country?: string;
 }
 
 export function validateRegisterForm(data: RegisterFormData): FieldErrors {
   const errors: FieldErrors = {};
-  const isOverseas = data.province === 'Overseas';
   setError(errors, 'full_name', validateName(data.full_name, 'Full name'));
   setError(errors, 'gender', validateGender(data.gender));
   setError(errors, 'date_of_birth', validateDateOfBirth(data.date_of_birth));
   setError(errors, 'email', validateEmail(data.email));
   setError(errors, 'password', validatePassword(data.password));
   setError(errors, 'phone', validatePhone(data.phone, true));
-  Object.assign(errors, validateLocation(data.province, data.city, data.country, isOverseas));
   return errors;
 }
 
@@ -221,6 +216,7 @@ export interface MyProfileFormData {
   country?: string;
   education?: string;
   profession?: string;
+  hafiz_quran?: string;
   caste?: string;
   color?: string;
   guardian_type?: string;
@@ -232,6 +228,7 @@ export interface MyProfileFormData {
   abroadHouseLocation?: string;
   about_me?: string;
   family_details?: string;
+  familyComplete?: boolean;
   languages?: string[];
   showPakistanResidence?: boolean;
   showAbroadResidence?: boolean;
@@ -354,9 +351,14 @@ export function validateMyProfileForm(data: MyProfileFormData): FieldErrors {
     requireHouseDetails: true,
   }));
   setError(errors, 'education', validateRequired(data.education, 'Education'));
+  setError(errors, 'hafiz_quran', validateSelect(data.hafiz_quran ?? '', 'Hafiz-e-Quran'));
   setError(errors, 'profession', validateRequired(data.profession, 'Profession'));
-  setError(errors, 'about_me', validateMinLength(data.about_me ?? '', 20, 'About me'));
-  setError(errors, 'family_details', validateMinLength(data.family_details ?? '', 10, 'Family details'));
+  if (!isEmpty(data.about_me)) {
+    setError(errors, 'about_me', validateMinLength(data.about_me ?? '', 20, 'About me'));
+  }
+  if (!data.familyComplete) {
+    setError(errors, 'family_details', 'Please add father and mother details');
+  }
   setError(errors, 'contacts', validateContacts(data.contacts));
   if (data.requirements.min_age == null || data.requirements.max_age == null) {
     setError(errors, 'req_age', 'Preferred minimum and maximum age are required');

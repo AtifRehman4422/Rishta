@@ -1,0 +1,580 @@
+{
+  "database_name": "pk_rishta_db",
+  "encoding": "UTF8",
+  "locale": "English_Pakistan.1252",
+  "extensions": [
+    {
+      "name": "uuid-ossp",
+      "schema": "public",
+      "description": "generate universally unique identifiers (UUIDs)"
+    }
+  ],
+  "tables": [
+    {
+      "name": "users",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "email", "type": "character varying(255)", "nullable": false},
+        {"name": "password_hash", "type": "character varying(255)", "nullable": false},
+        {"name": "phone", "type": "character varying(20)", "nullable": true},
+        {"name": "role", "type": "character varying(20)", "default": "user", "nullable": false},
+        {"name": "is_active", "type": "boolean", "default": true, "nullable": false},
+        {"name": "is_verified", "type": "boolean", "default": false, "nullable": false},
+        {"name": "last_login", "type": "timestamp with time zone", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "unique_constraints": ["email"],
+      "check_constraints": ["role IN ('user', 'admin')"],
+      "foreign_keys": [
+        {
+          "name": "profiles_user_id_fkey",
+          "columns": ["user_id"],
+          "references": {"table": "profiles", "column": "id"}
+        }
+      ],
+      "indexes": [
+        {"name": "idx_users_email", "columns": ["email"]},
+        {"name": "idx_users_role", "columns": ["role"]}
+      ]
+    },
+    {
+      "name": "profiles",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "user_id", "type": "uuid", "nullable": false},
+        {"name": "first_name", "type": "character varying(100)", "nullable": false},
+        {"name": "last_name", "type": "character varying(100)", "nullable": false},
+        {"name": "gender", "type": "character varying(10)", "nullable": false},
+        {"name": "date_of_birth", "type": "date", "nullable": false},
+        {"name": "height_cm", "type": "integer", "nullable": true},
+        {"name": "marital_status", "type": "character varying(20)", "default": "never_married", "nullable": true},
+        {"name": "religion", "type": "character varying(50)", "default": "Islam", "nullable": true},
+        {"name": "sect", "type": "character varying(50)", "nullable": true},
+        {"name": "caste", "type": "character varying(200)", "nullable": true},
+        {"name": "mother_tongue", "type": "character varying(200)", "nullable": true},
+        {"name": "city", "type": "character varying(100)", "nullable": false},
+        {"name": "province", "type": "character varying(100)", "nullable": true},
+        {"name": "country", "type": "character varying(100)", "default": "Pakistan", "nullable": false},
+        {"name": "education", "type": "text", "nullable": true},
+        {"name": "profession", "type": "text", "nullable": true},
+        {"name": "income_range", "type": "character varying(50)", "nullable": true},
+        {"name": "about_me", "type": "text", "nullable": true},
+        {"name": "looking_for", "type": "text", "nullable": true},
+        {"name": "family_details", "type": "text", "nullable": true},
+        {"name": "profile_photo", "type": "character varying(500)", "nullable": true},
+        {"name": "is_profile_complete", "type": "boolean", "default": false, "nullable": false},
+        {"name": "is_verified", "type": "boolean", "default": false, "nullable": false},
+        {"name": "visibility", "type": "character varying(20)", "default": "public", "nullable": false},
+        {"name": "profile_views", "type": "integer", "default": 0, "nullable": false},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "disability", "type": "character varying(100)", "nullable": true},
+        {"name": "color", "type": "character varying(50)", "nullable": true},
+        {"name": "house_own_location", "type": "character varying(200)", "nullable": true},
+        {"name": "house_rent_location", "type": "character varying(200)", "nullable": true},
+        {"name": "weight_kg", "type": "numeric(5,1)", "nullable": true},
+        {"name": "guardian_type", "type": "character varying(20)", "nullable": true},
+        {"name": "guardian_name", "type": "character varying(150)", "nullable": true},
+        {"name": "languages", "type": "text", "nullable": true},
+        {"name": "abroad_country", "type": "character varying(100)", "nullable": true},
+        {"name": "abroad_house_own_location", "type": "text", "nullable": true},
+        {"name": "abroad_house_rent_location", "type": "text", "nullable": true}
+      ],
+      "primary_key": "id",
+      "unique_constraints": ["user_id"],
+      "check_constraints": [
+        "gender IN ('male', 'female')",
+        "marital_status IN ('never_married', 'divorced', 'widowed', 'separated')",
+        "visibility IN ('public', 'members_only', 'hidden')"
+      ],
+      "foreign_keys": [
+        {
+          "name": "profiles_user_id_fkey",
+          "columns": ["user_id"],
+          "references": {"table": "users", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {"name": "idx_profiles_city", "columns": ["city"]},
+        {"name": "idx_profiles_country", "columns": ["country"]},
+        {"name": "idx_profiles_gender", "columns": ["gender"]},
+        {"name": "idx_profiles_marital_status", "columns": ["marital_status"]},
+        {"name": "idx_profiles_province", "columns": ["province"]},
+        {"name": "idx_profiles_visibility", "columns": ["visibility"]}
+      ]
+    },
+    {
+      "name": "partner_preferences",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "profile_id", "type": "uuid", "nullable": false},
+        {"name": "min_age", "type": "integer", "default": 18, "nullable": true},
+        {"name": "max_age", "type": "integer", "default": 45, "nullable": true},
+        {"name": "min_height_cm", "type": "integer", "nullable": true},
+        {"name": "max_height_cm", "type": "integer", "nullable": true},
+        {"name": "religion", "type": "character varying(50)", "nullable": true},
+        {"name": "sect", "type": "character varying(50)", "nullable": true},
+        {"name": "city", "type": "text", "nullable": true},
+        {"name": "province", "type": "text", "nullable": true},
+        {"name": "education", "type": "text", "nullable": true},
+        {"name": "profession", "type": "text", "nullable": true},
+        {"name": "marital_status", "type": "character varying(20)", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "requirements_notes", "type": "text", "nullable": true},
+        {"name": "country", "type": "character varying(100)", "nullable": true},
+        {"name": "caste", "type": "text", "nullable": true}
+      ],
+      "primary_key": "id",
+      "unique_constraints": ["profile_id"],
+      "foreign_keys": [
+        {
+          "name": "partner_preferences_profile_id_fkey",
+          "columns": ["profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "interests",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "sender_id", "type": "uuid", "nullable": false},
+        {"name": "receiver_id", "type": "uuid", "nullable": false},
+        {"name": "status", "type": "character varying(20)", "default": "pending", "nullable": false},
+        {"name": "message", "type": "text", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "unique_constraints": ["(sender_id, receiver_id)"],
+      "check_constraints": ["status IN ('pending', 'accepted', 'rejected', 'withdrawn')"],
+      "foreign_keys": [
+        {
+          "name": "interests_sender_id_fkey",
+          "columns": ["sender_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "interests_receiver_id_fkey",
+          "columns": ["receiver_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {"name": "idx_interests_sender", "columns": ["sender_id"]},
+        {"name": "idx_interests_receiver", "columns": ["receiver_id", "status"]}
+      ]
+    },
+    {
+      "name": "favorites",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "profile_id", "type": "uuid", "nullable": false},
+        {"name": "favorite_id", "type": "uuid", "nullable": false},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "unique_constraints": ["(profile_id, favorite_id)"],
+      "foreign_keys": [
+        {
+          "name": "favorites_profile_id_fkey",
+          "columns": ["profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "favorites_favorite_id_fkey",
+          "columns": ["favorite_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "profile_photos",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "profile_id", "type": "uuid", "nullable": false},
+        {"name": "photo_url", "type": "character varying(500)", "nullable": false},
+        {"name": "is_primary", "type": "boolean", "default": false, "nullable": false},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "foreign_keys": [
+        {
+          "name": "profile_photos_profile_id_fkey",
+          "columns": ["profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "profile_contacts",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "profile_id", "type": "uuid", "nullable": false},
+        {"name": "contact_type", "type": "character varying(20)", "nullable": false},
+        {"name": "number", "type": "character varying(50)", "nullable": false},
+        {"name": "sort_order", "type": "integer", "default": 0, "nullable": false},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "check_constraints": ["contact_type IN ('phone', 'whatsapp')"],
+      "foreign_keys": [
+        {
+          "name": "profile_contacts_profile_id_fkey",
+          "columns": ["profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {"name": "idx_profile_contacts_profile", "columns": ["profile_id"]}
+      ]
+    },
+    {
+      "name": "contact_access_requests",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "requester_profile_id", "type": "uuid", "nullable": false},
+        {"name": "target_profile_id", "type": "uuid", "nullable": false},
+        {"name": "status", "type": "character varying(20)", "default": "pending", "nullable": false},
+        {"name": "user_message", "type": "text", "nullable": true},
+        {"name": "admin_message", "type": "text", "nullable": true},
+        {"name": "reviewed_by", "type": "uuid", "nullable": true},
+        {"name": "reviewed_at", "type": "timestamp with time zone", "nullable": true},
+        {"name": "expires_at", "type": "timestamp with time zone", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "response_source", "type": "character varying(20)", "nullable": true}
+      ],
+      "primary_key": "id",
+      "check_constraints": ["status IN ('pending', 'approved', 'rejected', 'expired')"],
+      "foreign_keys": [
+        {
+          "name": "contact_access_requests_requester_profile_id_fkey",
+          "columns": ["requester_profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "contact_access_requests_target_profile_id_fkey",
+          "columns": ["target_profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "contact_access_requests_reviewed_by_fkey",
+          "columns": ["reviewed_by"],
+          "references": {"table": "users", "column": "id"}
+        }
+      ],
+      "indexes": [
+        {"name": "idx_contact_requests_requester", "columns": ["requester_profile_id"]},
+        {"name": "idx_contact_requests_target", "columns": ["target_profile_id"]},
+        {"name": "idx_contact_requests_status", "columns": ["status", "created_at"]},
+        {"name": "idx_contact_requests_pending_unique", "columns": ["requester_profile_id", "target_profile_id"], "unique": true, "where": "status = 'pending'"}
+      ]
+    },
+    {
+      "name": "complaints",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "reporter_profile_id", "type": "uuid", "nullable": false},
+        {"name": "reported_profile_id", "type": "uuid", "nullable": false},
+        {"name": "category", "type": "character varying(50)", "nullable": false},
+        {"name": "description", "type": "text", "nullable": false},
+        {"name": "status", "type": "character varying(20)", "default": "pending", "nullable": false},
+        {"name": "admin_notes", "type": "text", "nullable": true},
+        {"name": "reviewed_by", "type": "uuid", "nullable": true},
+        {"name": "reviewed_at", "type": "timestamp with time zone", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "check_constraints": ["status IN ('pending', 'resolved', 'dismissed')"],
+      "foreign_keys": [
+        {
+          "name": "complaints_reporter_profile_id_fkey",
+          "columns": ["reporter_profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "complaints_reported_profile_id_fkey",
+          "columns": ["reported_profile_id"],
+          "references": {"table": "profiles", "column": "id"},
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "complaints_reviewed_by_fkey",
+          "columns": ["reviewed_by"],
+          "references": {"table": "users", "column": "id"}
+        }
+      ],
+      "indexes": [
+        {"name": "idx_complaints_status", "columns": ["status", "created_at"]}
+      ]
+    },
+    {
+      "name": "complaint_messages",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "complaint_id", "type": "uuid", "nullable": false},
+        {"name": "sender_role", "type": "character varying(20)", "nullable": false},
+        {"name": "sender_user_id", "type": "uuid", "nullable": true},
+        {"name": "message", "type": "text", "nullable": false},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "check_constraints": ["sender_role IN ('admin', 'reporter', 'reported')"],
+      "foreign_keys": [
+        {
+          "name": "complaint_messages_complaint_id_fkey",
+          "columns": ["complaint_id"],
+          "references": {"table": "complaints", "column": "id"},
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "complaint_messages_sender_user_id_fkey",
+          "columns": ["sender_user_id"],
+          "references": {"table": "users", "column": "id"}
+        }
+      ],
+      "indexes": [
+        {"name": "idx_complaint_messages_complaint", "columns": ["complaint_id"]}
+      ]
+    },
+    {
+      "name": "admin_logs",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "admin_id", "type": "uuid", "nullable": false},
+        {"name": "action", "type": "character varying(100)", "nullable": false},
+        {"name": "target_type", "type": "character varying(50)", "nullable": true},
+        {"name": "target_id", "type": "uuid", "nullable": true},
+        {"name": "details", "type": "jsonb", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "foreign_keys": [
+        {
+          "name": "admin_logs_admin_id_fkey",
+          "columns": ["admin_id"],
+          "references": {"table": "users", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "auth_otps",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "user_id", "type": "uuid", "nullable": true},
+        {"name": "email", "type": "character varying(255)", "nullable": false},
+        {"name": "purpose", "type": "character varying(30)", "nullable": false},
+        {"name": "code_hash", "type": "character varying(255)", "nullable": false},
+        {"name": "attempts", "type": "integer", "default": 0, "nullable": false},
+        {"name": "max_attempts", "type": "integer", "default": 5, "nullable": false},
+        {"name": "expires_at", "type": "timestamp with time zone", "nullable": false},
+        {"name": "consumed_at", "type": "timestamp with time zone", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "check_constraints": ["purpose IN ('email_verify', 'password_reset')"],
+      "foreign_keys": [
+        {
+          "name": "auth_otps_user_id_fkey",
+          "columns": ["user_id"],
+          "references": {"table": "users", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {"name": "idx_auth_otps_email_purpose_active", "columns": ["email", "purpose", "created_at DESC"], "where": "consumed_at IS NULL"}
+      ]
+    },
+    {
+      "name": "notifications",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "user_id", "type": "uuid", "nullable": false},
+        {"name": "type", "type": "character varying(50)", "nullable": false},
+        {"name": "title", "type": "character varying(200)", "nullable": false},
+        {"name": "body", "type": "text", "nullable": true},
+        {"name": "link", "type": "character varying(500)", "nullable": true},
+        {"name": "related_id", "type": "uuid", "nullable": true},
+        {"name": "is_read", "type": "boolean", "default": false, "nullable": false},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "foreign_keys": [
+        {
+          "name": "notifications_user_id_fkey",
+          "columns": ["user_id"],
+          "references": {"table": "users", "column": "id"},
+          "on_delete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        {"name": "idx_notifications_user_unread", "columns": ["user_id", "is_read", "created_at DESC"]}
+      ]
+    },
+    {
+      "name": "dropdown_options",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "field_key", "type": "character varying(50)", "nullable": false},
+        {"name": "category", "type": "character varying(100)", "nullable": true},
+        {"name": "label", "type": "text", "nullable": false},
+        {"name": "is_active", "type": "boolean", "default": true, "nullable": false},
+        {"name": "sort_order", "type": "integer", "default": 0, "nullable": false},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "indexes": [
+        {"name": "idx_dropdown_options_field", "columns": ["field_key", "is_active", "sort_order"]},
+        {"name": "idx_dropdown_options_unique", "columns": ["field_key", "COALESCE(category, '')", "lower(label)"], "unique": true}
+      ]
+    },
+    {
+      "name": "dropdown_option_requests",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "user_id", "type": "uuid", "nullable": true},
+        {"name": "requester_name", "type": "character varying(150)", "nullable": true},
+        {"name": "requester_email", "type": "character varying(255)", "nullable": true},
+        {"name": "field_key", "type": "character varying(50)", "nullable": false},
+        {"name": "category", "type": "character varying(100)", "nullable": true},
+        {"name": "requested_label", "type": "text", "nullable": false},
+        {"name": "status", "type": "character varying(20)", "default": "pending", "nullable": false},
+        {"name": "admin_notes", "type": "text", "nullable": true},
+        {"name": "reviewed_by", "type": "uuid", "nullable": true},
+        {"name": "reviewed_at", "type": "timestamp with time zone", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "check_constraints": ["status IN ('pending', 'approved', 'rejected')"],
+      "foreign_keys": [
+        {
+          "name": "dropdown_option_requests_user_id_fkey",
+          "columns": ["user_id"],
+          "references": {"table": "users", "column": "id"},
+          "on_delete": "SET NULL"
+        },
+        {
+          "name": "dropdown_option_requests_reviewed_by_fkey",
+          "columns": ["reviewed_by"],
+          "references": {"table": "users", "column": "id"},
+          "on_delete": "SET NULL"
+        }
+      ],
+      "indexes": [
+        {"name": "idx_dropdown_option_requests_status", "columns": ["status", "created_at DESC"]}
+      ]
+    },
+    {
+      "name": "contact_form_messages",
+      "schema": "public",
+      "columns": [
+        {"name": "id", "type": "uuid", "default": "public.uuid_generate_v4()", "nullable": false},
+        {"name": "name", "type": "character varying(100)", "nullable": false},
+        {"name": "email", "type": "character varying(255)", "nullable": false},
+        {"name": "subject", "type": "character varying(50)", "nullable": false},
+        {"name": "message", "type": "text", "nullable": false},
+        {"name": "status", "type": "character varying(20)", "default": "new", "nullable": false},
+        {"name": "admin_notes", "type": "text", "nullable": true},
+        {"name": "created_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "updated_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "id",
+      "check_constraints": ["status IN ('new', 'read', 'replied', 'archived')"],
+      "indexes": [
+        {"name": "idx_contact_form_messages_email", "columns": ["email"]},
+        {"name": "idx_contact_form_messages_status", "columns": ["status", "created_at DESC"]}
+      ]
+    },
+    {
+      "name": "site_visitors_daily",
+      "schema": "public",
+      "columns": [
+        {"name": "visit_date", "type": "date", "nullable": false},
+        {"name": "visitor_key", "type": "character varying(64)", "nullable": false},
+        {"name": "user_id", "type": "uuid", "nullable": true},
+        {"name": "page_views", "type": "integer", "default": 1, "nullable": false},
+        {"name": "last_path", "type": "character varying(200)", "nullable": true},
+        {"name": "first_seen_at", "type": "timestamp with time zone", "default": "now()", "nullable": false},
+        {"name": "last_seen_at", "type": "timestamp with time zone", "default": "now()", "nullable": false}
+      ],
+      "primary_key": "(visit_date, visitor_key)",
+      "foreign_keys": [
+        {
+          "name": "site_visitors_daily_user_id_fkey",
+          "columns": ["user_id"],
+          "references": {"table": "users", "column": "id"},
+          "on_delete": "SET NULL"
+        }
+      ],
+      "indexes": [
+        {"name": "idx_site_visitors_daily_date", "columns": ["visit_date"]}
+      ]
+    }
+  ],
+  "relationships": {
+    "users": {
+      "has_one": ["profiles"],
+      "has_many": [
+        "admin_logs",
+        "auth_otps",
+        "notifications",
+        "dropdown_option_requests",
+        "site_visitors_daily"
+      ]
+    },
+    "profiles": {
+      "belongs_to": ["users"],
+      "has_one": ["partner_preferences"],
+      "has_many": [
+        "profile_photos",
+        "profile_contacts",
+        "interests (as sender)",
+        "interests (as receiver)",
+        "favorites (as profile)",
+        "favorites (as favorite)",
+        "contact_access_requests (as requester)",
+        "contact_access_requests (as target)",
+        "complaints (as reporter)",
+        "complaints (as reported)"
+      ]
+    },
+    "complaints": {
+      "belongs_to": ["profiles", "users"],
+      "has_many": ["complaint_messages"]
+    }
+  }
+}

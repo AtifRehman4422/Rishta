@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { AuthShellComponent } from '../../../shared/components/auth-shell/auth-shell';
+import { validateEmail } from '../../../core/utils/validation';
 
 @Component({
   selector: 'app-forgot-password',
@@ -12,7 +13,7 @@ import { AuthShellComponent } from '../../../shared/components/auth-shell/auth-s
     <app-auth-shell
       title="Forgot Password"
       urduTitle="پاس ورڈ بھول گئے؟"
-      subtitle="OTP aapki email par bheja jayega"
+      subtitle="An OTP will be sent to your email"
     >
       @if (error()) {
         <div class="alert alert-error">{{ error() }}</div>
@@ -153,8 +154,9 @@ export class ForgotPasswordComponent {
   }
 
   sendOtp(): void {
-    if (!this.email.includes('@')) {
-      this.error.set('Enter a valid email');
+    const emailError = validateEmail(this.email);
+    if (emailError) {
+      this.error.set(emailError);
       return;
     }
     this.loading.set(true);

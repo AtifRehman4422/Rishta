@@ -4,6 +4,7 @@ const { generateToken } = require('../middleware/auth');
 const { validatePassword } = require('../utils/password');
 const { isProduction } = require('../middleware/security');
 const { refreshProfileCompletion } = require('./profileController');
+const { validateEmail, validatePhone } = require('../utils/validation');
 const {
   createAndSendOtp,
   verifyOtp,
@@ -23,6 +24,32 @@ function splitFullName(fullName) {
     first_name: parts[0],
     last_name: parts.slice(1).join(' '),
   };
+}
+
+async function syncRegisterPhoneContact(userId, phoneValue) {
+  if (!phoneValue) return;
+  const profile = await pool.query('SELECT id FROM profiles WHERE user_id = $1', [userId]);
+  if (!profile.rows.length) return;
+  const profileId = profile.rows[0].id;
+  const existing = await pool.query(
+    `SELECT id FROM profile_contacts
+     WHERE profile_id = $1 AND contact_type = 'phone'
+     ORDER BY sort_order, created_at
+     LIMIT 1`,
+    [profileId]
+  );
+  if (existing.rows.length) {
+    await pool.query('UPDATE profile_contacts SET number = $1 WHERE id = $2', [
+      phoneValue,
+      existing.rows[0].id,
+    ]);
+    return;
+  }
+  await pool.query(
+    `INSERT INTO profile_contacts (profile_id, contact_type, number, sort_order)
+     VALUES ($1, 'phone', $2, 0)`,
+    [profileId, phoneValue]
+  );
 }
 
 function otpError(res, err) {
@@ -64,16 +91,24 @@ async function register(req, res) {
       return res.status(400).json({ success: false, message: 'Required fields missing' });
     }
 
-    if (!phoneValue) {
-      return res.status(400).json({ success: false, message: 'Phone number is required' });
+    const emailError = validateEmail(emailValue);
+    if (emailError) {
+      return res.status(400).json({ success: false, message: emailError });
+    }
+
+    const phoneError = validatePhone(phoneValue, true);
+    if (phoneError) {
+      return res.status(400).json({ success: false, message: phoneError });
     }
 
     const isOverseas = provinceValue === 'Overseas';
-    if (isOverseas && !country) {
+    if (isOverseas && !(country || '').trim()) {
       return res.status(400).json({ success: false, message: 'Country is required for overseas location' });
     }
 
-    const profileCountry = isOverseas ? country : (country || 'Pakistan');
+    const profileCountry = isOverseas
+      ? (country || '').trim()
+      : ((country || '').trim() || (provinceValue ? 'Pakistan' : ''));
 
     const passwordError = validatePassword(password);
     if (passwordError) {
@@ -87,6 +122,14 @@ async function register(req, res) {
 
     if (existing.rows.length && existing.rows[0].is_verified) {
       return res.status(409).json({ success: false, message: 'Email already registered' });
+    }
+
+    const phoneCheck = await pool.query(
+      'SELECT id, is_verified FROM users WHERE phone = $1',
+      [phoneValue]
+    );
+    if (phoneCheck.rows.length && phoneCheck.rows[0].is_verified) {
+      return res.status(409).json({ success: false, message: 'Phone number already registered' });
     }
 
     const hash = await bcrypt.hash(password, 12);
@@ -139,6 +182,8 @@ async function register(req, res) {
         ]
       );
     }
+
+    await syncRegisterPhoneContact(user.id, phoneValue);
 
     let otpMeta;
     try {
@@ -228,6 +273,10 @@ async function resendOtp(req, res) {
         message: 'Valid email and purpose (email_verify | password_reset) are required',
       });
     }
+    const emailError = validateEmail(email);
+    if (emailError) {
+      return res.status(400).json({ success: false, message: emailError });
+    }
 
     const userResult = await pool.query(
       'SELECT id, is_verified, is_active FROM users WHERE email = $1',
@@ -285,8 +334,9 @@ async function resendOtp(req, res) {
 async function forgotPassword(req, res) {
   try {
     const email = String(req.body.email || '').toLowerCase().trim();
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+    const emailError = validateEmail(email);
+    if (emailError) {
+      return res.status(400).json({ success: false, message: emailError });
     }
 
     const result = await pool.query(
@@ -388,13 +438,18 @@ async function resetPassword(req, res) {
 async function login(req, res) {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
+    const emailValue = String(email || '').toLowerCase().trim();
+    if (!emailValue || !password) {
       return res.status(400).json({ success: false, message: 'Email and password required' });
+    }
+    const emailError = validateEmail(emailValue);
+    if (emailError) {
+      return res.status(400).json({ success: false, message: emailError });
     }
 
     const result = await pool.query(
       'SELECT id, email, password_hash, role, is_active, is_verified FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      [emailValue]
     );
 
     if (!result.rows.length) {

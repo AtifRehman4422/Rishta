@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/config/api_config.dart';
 import 'core/state/auth_controller.dart';
 import 'core/state/notification_controller.dart';
 import 'core/theme/app_theme.dart';
@@ -7,6 +8,7 @@ import 'features/splash/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiConfig.init();
   await AuthController.instance.bootstrap();
   await NotificationController.instance.bootstrap();
   runApp(const PkRishtaApp());

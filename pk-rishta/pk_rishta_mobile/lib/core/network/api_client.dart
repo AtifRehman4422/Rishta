@@ -108,11 +108,56 @@ class ApiClient {
     );
   }
 
+  Future<ApiResult> delete(String path) async {
+    return _send(() => http.delete(_uri(path), headers: _headers));
+  }
+
+  /// Multipart/form-data upload (e.g. profile photo via `POST /profiles/me/photo`).
+  Future<ApiResult> upload(
+    String path, {
+    required String field,
+    required String filename,
+    required List<int> bytes,
+    String contentType = 'application/octet-stream',
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(path))
+      ..headers.addAll({
+        if (hasToken) 'Authorization': 'Bearer $_token',
+      })
+      ..files.add(http.MultipartFile.fromBytes(
+        field,
+        bytes,
+        filename: filename,
+        contentType: _parseMediaType(contentType),
+      ));
+    return _sendUpload(request);
+  }
+
+  static http.MediaType _parseMediaType(String value) {
+    final parts = value.split('/');
+    if (parts.length == 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+      return http.MediaType(parts[0].trim(), parts[1].trim());
+    }
+    return http.MediaType('application', 'octet-stream');
+  }
+
+  Future<ApiResult> _sendUpload(http.MultipartRequest request) async {
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
+    final res = await http.Response.fromStream(streamed);
+    return _parseResponse(res);
+  }
+
   Future<ApiResult> _send(Future<http.Response> Function() request) async {
+    if (!hasToken) {
+      await loadToken();
+    }
     late final http.Response res;
     try {
       res = await request().timeout(const Duration(seconds: 20));
     } catch (e) {
+      if (kReleaseMode) {
+        throw ApiException('Cannot reach server. Please check your connection and try again.');
+      }
       if (kIsWeb) {
         throw ApiException(
           'Cannot reach API (${ApiConfig.baseUrl}). '
@@ -120,10 +165,15 @@ class ApiClient {
         );
       }
       throw ApiException(
-        'Cannot reach server. Make sure the backend is running on port 3000.',
+        'Cannot reach server (${ApiConfig.baseUrl}). '
+        'Use the same Wi-Fi as this PC, keep the backend on port 3000, '
+        'and update DEV_LAN_HOST if your PC IP changed.',
       );
     }
+    return _parseResponse(res);
+  }
 
+  ApiResult _parseResponse(http.Response res) {
     Map<String, dynamic> json;
     try {
       json = jsonDecode(res.body) as Map<String, dynamic>;

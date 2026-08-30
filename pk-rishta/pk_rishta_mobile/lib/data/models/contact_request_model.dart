@@ -123,20 +123,29 @@ class ComplaintMessage {
     required this.senderRole,
     required this.message,
     required this.createdAt,
+    this.recipientRole,
   });
 
   final String id;
   final String senderRole;
+  final String? recipientRole;
   final String message;
   final String createdAt;
 
   factory ComplaintMessage.fromJson(Map<String, dynamic> json) {
+    final raw = json['recipient_role']?.toString().trim();
     return ComplaintMessage(
       id: json['id'].toString(),
       senderRole: (json['sender_role'] ?? '').toString(),
+      recipientRole: (raw == null || raw.isEmpty || raw == 'null') ? null : raw,
       message: (json['message'] ?? '').toString(),
       createdAt: (json['created_at'] ?? '').toString(),
     );
+  }
+
+  String displayRole({required bool isSupport}) {
+    if (senderRole == 'admin') return 'Admin';
+    return 'You';
   }
 }
 
@@ -152,6 +161,11 @@ class ComplaintItem {
     this.reporterLastName,
     this.reportedFirstName,
     this.reportedLastName,
+    this.reporterCity,
+    this.reportedCity,
+    this.reporterEmail,
+    this.reportedEmail,
+    this.adminNotes,
     this.messages = const [],
   });
 
@@ -165,6 +179,11 @@ class ComplaintItem {
   final String? reporterLastName;
   final String? reportedFirstName;
   final String? reportedLastName;
+  final String? reporterCity;
+  final String? reportedCity;
+  final String? reporterEmail;
+  final String? reportedEmail;
+  final String? adminNotes;
   final List<ComplaintMessage> messages;
 
   String get reporterName =>
@@ -172,6 +191,22 @@ class ComplaintItem {
 
   String get reportedName =>
       '${reportedFirstName ?? ''} ${reportedLastName ?? ''}'.trim();
+
+  String get categoryLabel =>
+      category.replaceAll('_', ' ');
+
+  List<ComplaintMessage> messagesFor(String party) {
+    return messages.where((m) {
+      if (m.senderRole == party) return true;
+      if (m.senderRole == 'admin') {
+        final r = (m.recipientRole == null || m.recipientRole!.isEmpty)
+            ? 'reporter'
+            : m.recipientRole!;
+        return r == party || r == 'both';
+      }
+      return false;
+    }).toList();
+  }
 
   factory ComplaintItem.fromJson(Map<String, dynamic> json) {
     final msgs = json['messages'] as List? ?? [];
@@ -186,6 +221,11 @@ class ComplaintItem {
       reporterLastName: json['reporter_last_name'] as String?,
       reportedFirstName: json['reported_first_name'] as String?,
       reportedLastName: json['reported_last_name'] as String?,
+      reporterCity: json['reporter_city'] as String?,
+      reportedCity: json['reported_city'] as String?,
+      reporterEmail: json['reporter_email'] as String?,
+      reportedEmail: json['reported_email'] as String?,
+      adminNotes: json['admin_notes'] as String?,
       messages: msgs
           .map((e) => ComplaintMessage.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -194,10 +234,10 @@ class ComplaintItem {
 }
 
 class MyComplaintsData {
-  MyComplaintsData({required this.filed, required this.againstMe});
+  MyComplaintsData({required this.filed, required this.support});
 
   final List<ComplaintItem> filed;
-  final List<ComplaintItem> againstMe;
+  final List<ComplaintItem> support;
 
   factory MyComplaintsData.fromJson(Map<String, dynamic> json) {
     List<ComplaintItem> parse(String key) => ((json[key] as List?) ?? [])
@@ -205,7 +245,7 @@ class MyComplaintsData {
         .toList();
     return MyComplaintsData(
       filed: parse('filed'),
-      againstMe: parse('against_me'),
+      support: parse('support'),
     );
   }
 }

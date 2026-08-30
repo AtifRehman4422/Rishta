@@ -33,6 +33,7 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
             <a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a>
             @if (auth.isLoggedIn() && !auth.isAdmin()) {
               <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">My Activity</a>
+              <a routerLink="/favorites" routerLinkActive="active" (click)="closeMenu()">Favorites</a>
               @if (auth.currentUser()?.is_profile_complete) {
                 <a routerLink="/my-profile" routerLinkActive="active" (click)="closeMenu()">My Profile</a>
                 <a

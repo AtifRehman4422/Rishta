@@ -3,6 +3,17 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Profile, ProfileContact, PartnerPreferences } from '../../core/models';
+import {
+  emptyFamilyDetails,
+  emptySibling,
+  familyCounts,
+  familyProfessionOptions,
+  isFamilyDetailsComplete,
+  isFamilyDetailsEmpty,
+  parseFamilyDetails,
+  serializeFamilyDetails,
+  type FamilyDetails,
+} from '../../core/utils/family-details';
 import { sectsForReligion, RELIGION_OPTIONS, ALL_SECT_OPTIONS } from '../../core/constants/religion-sects';
 import { PAKISTAN_LANGUAGES, INTERNATIONAL_LANGUAGES } from '../../core/constants/languages';
 import { educationOptionsWithValue } from '../../core/constants/education';
@@ -156,7 +167,7 @@ function joinMultiSelect(values: string[]): string | undefined {
             <div class="section-body">
               <div class="form-group">
                 <label class="form-label">Full Name{{ !isAdminForm ? ' *' : '' }}</label>
-                <input class="form-input" [class.input-invalid]="formErrors.show('full_name')" [(ngModel)]="fullName" name="full_name" placeholder="e.g. Ahmed Khan" (blur)="formErrors.touch('full_name')" (ngModelChange)="formErrors.clear('full_name')" />
+                <input class="form-input" [class.input-invalid]="formErrors.show('full_name')" [(ngModel)]="fullName" name="full_name" placeholder="Enter full name" (blur)="formErrors.touch('full_name')" (ngModelChange)="formErrors.clear('full_name')" />
                 <app-field-error [message]="formErrors.message('full_name')" />
               </div>
               <div class="form-row">
@@ -373,7 +384,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                 </div>
 
                 @if (showPakistanLanguages) {
-                  <h4 class="lang-group-title">Pakistan ki zabanain</h4>
+                  <h4 class="lang-group-title">Pakistan languages</h4>
                   <div class="lang-grid">
                     @for (lang of pakistanLanguages; track lang) {
                       <label class="lang-chip" [class.active]="isLanguageSelected(lang)">
@@ -644,7 +655,20 @@ function joinMultiSelect(values: string[]): string | undefined {
                 }
               </div>
 
-              <div class="profession-section" [class.input-invalid-wrap]="formErrors.show('profession')">
+              <div class="profession-section" [class.input-invalid-wrap]="formErrors.show('hafiz_quran') || formErrors.show('profession')">
+                <label class="form-label">Hafiz-e-Quran{{ !isAdminForm ? ' *' : '' }}</label>
+                <div class="profession-category-row">
+                  <label class="profession-category" [class.active]="profile.hafiz_quran === 'Yes'">
+                    <input type="radio" name="hafiz_quran" value="Yes" [(ngModel)]="profile.hafiz_quran" (ngModelChange)="formErrors.clear('hafiz_quran')" />
+                    <span>Yes</span>
+                  </label>
+                  <label class="profession-category" [class.active]="profile.hafiz_quran === 'No'">
+                    <input type="radio" name="hafiz_quran" value="No" [(ngModel)]="profile.hafiz_quran" (ngModelChange)="formErrors.clear('hafiz_quran')" />
+                    <span>No</span>
+                  </label>
+                </div>
+                <app-field-error [message]="formErrors.message('hafiz_quran')" />
+
                 <label class="form-label">Profession{{ !isAdminForm ? ' *' : '' }}</label>
                 <div class="profession-category-row">
                   @for (cat of professionCategories; track cat) {
@@ -705,11 +729,11 @@ function joinMultiSelect(values: string[]): string | undefined {
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Preferred Age (Min){{ !isAdminForm ? ' *' : '' }}</label>
-                  <input class="form-input" type="number" [(ngModel)]="requirements.min_age" name="req_min_age" min="18" max="80" placeholder="e.g. 22" (ngModelChange)="formErrors.clear('req_age')" />
+                  <input class="form-input" type="number" [(ngModel)]="requirements.min_age" name="req_min_age" min="18" max="80" placeholder="Any" (ngModelChange)="formErrors.clear('req_age')" />
                 </div>
                 <div class="form-group">
                   <label class="form-label">Preferred Age (Max){{ !isAdminForm ? ' *' : '' }}</label>
-                  <input class="form-input" type="number" [(ngModel)]="requirements.max_age" name="req_max_age" min="18" max="80" placeholder="e.g. 35" (ngModelChange)="formErrors.clear('req_age')" />
+                  <input class="form-input" type="number" [(ngModel)]="requirements.max_age" name="req_max_age" min="18" max="80" placeholder="Any" (ngModelChange)="formErrors.clear('req_age')" />
                 </div>
               </div>
               <app-field-error [message]="formErrors.message('req_age')" />
@@ -724,7 +748,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                       }
                     </select>
                     <select class="form-select" [(ngModel)]="reqMinInches" name="req_min_in" (ngModelChange)="syncReqMinHeight()" [disabled]="reqMinFeet === null">
-                      <option [ngValue]="null">In</option>
+                      <option [ngValue]="null">Any</option>
                       @for (i of inchesOptions; track i) {
                         <option [ngValue]="i">{{ i }}″</option>
                       }
@@ -741,7 +765,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                       }
                     </select>
                     <select class="form-select" [(ngModel)]="reqMaxInches" name="req_max_in" (ngModelChange)="syncReqMaxHeight()" [disabled]="reqMaxFeet === null">
-                      <option [ngValue]="null">In</option>
+                      <option [ngValue]="null">Any</option>
                       @for (i of inchesOptions; track i) {
                         <option [ngValue]="i">{{ i }}″</option>
                       }
@@ -779,7 +803,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                 <label class="form-label">Preferred Caste</label>
                 <div class="multi-pick-row">
                   <select class="form-select" [(ngModel)]="pendingReqCaste" name="pending_req_caste">
-                    <option value="">Select caste</option>
+                    <option value="">Any</option>
                     @for (c of reqCasteDropdownOptions; track c) {
                       <option [value]="c">{{ c }}</option>
                     }
@@ -801,7 +825,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                 <label class="form-label">Preferred State</label>
                 <div class="multi-pick-row">
                   <select class="form-select" [(ngModel)]="pendingReqState" name="pending_req_state">
-                    <option value="">Select state</option>
+                    <option value="">Any</option>
                     @for (prov of reqStateDropdownOptions; track prov) {
                       <option [value]="prov">{{ provinceLabel(prov) }}</option>
                     }
@@ -824,7 +848,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                   <label class="form-label">Preferred Country (Abroad)</label>
                   <div class="multi-pick-row">
                     <select class="form-select" [(ngModel)]="pendingReqCountry" name="pending_req_country">
-                      <option value="">Select country</option>
+                      <option value="">Any</option>
                       @for (c of overseasCountries; track c) {
                         <option [value]="c">{{ c }}</option>
                       }
@@ -847,7 +871,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                 <label class="form-label">Preferred City</label>
                 <div class="multi-pick-row">
                   <select class="form-select" [(ngModel)]="pendingReqCity" name="pending_req_city" [disabled]="!selectedReqStates.length">
-                    <option value="">{{ selectedReqStates.length ? 'Select city' : 'Select preferred state first' }}</option>
+                    <option value="">{{ selectedReqStates.length ? 'Any' : 'Select preferred state first' }}</option>
                     @for (city of reqCityDropdownOptions; track city) {
                       <option [value]="city">{{ city }}</option>
                     }
@@ -869,7 +893,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                 <label class="form-label">Preferred Education</label>
                 <div class="multi-pick-row">
                   <select class="form-select" [(ngModel)]="pendingReqEducation" name="pending_req_education">
-                    <option value="">Select education</option>
+                    <option value="">Any</option>
                     @for (e of reqEducationDropdownOptions; track e) {
                       <option [value]="e">{{ e }}</option>
                     }
@@ -891,6 +915,15 @@ function joinMultiSelect(values: string[]): string | undefined {
                 <label class="form-label">Preferred Profession</label>
                 <div class="profession-section">
                   <div class="profession-category-row">
+                    <label class="profession-category" [class.active]="!reqProfessionCategory && !selectedReqProfessions.length">
+                      <input
+                        type="radio"
+                        name="req_profession_category"
+                        [checked]="!reqProfessionCategory && !selectedReqProfessions.length"
+                        (change)="clearReqProfessionPreference()"
+                      />
+                      <span>Any</span>
+                    </label>
                     @for (cat of professionCategories; track cat) {
                       <label class="profession-category" [class.active]="reqProfessionCategory === cat">
                         <input type="radio" [value]="cat" [(ngModel)]="reqProfessionCategory" name="req_profession_category" (ngModelChange)="onReqProfessionCategoryChange($event)" />
@@ -901,7 +934,7 @@ function joinMultiSelect(values: string[]): string | undefined {
                   @if (reqProfessionCategory) {
                     <div class="multi-pick-row">
                       <select class="form-select" [(ngModel)]="reqProfessionChoice" name="req_profession_choice" (ngModelChange)="onReqProfessionChoiceChange($event)">
-                        <option value="">Select role</option>
+                        <option value="">Any</option>
                         @for (p of reqProfessionSelectOptions; track p) {
                           <option [value]="p">{{ p }}</option>
                         }
@@ -954,37 +987,172 @@ function joinMultiSelect(values: string[]): string | undefined {
               <span class="section-icon">💬</span>
               <div>
                 <h3>About You</h3>
-                <p>Help others know you better</p>
+                <p>Optional — tell families a little more if you like</p>
               </div>
             </div>
             <div class="section-body">
               <div class="form-group">
                 <label class="form-label">About Me</label>
                 <textarea class="form-textarea" [class.input-invalid]="formErrors.show('about_me')" [(ngModel)]="profile.about_me" name="about" rows="4"
-                  placeholder="Tell about yourself, your values, and what makes you unique... (min 20 characters)"
+                  placeholder="Tell about yourself, your values, and what makes you unique (optional)"
                   (blur)="formErrors.touch('about_me')" (ngModelChange)="formErrors.clear('about_me')"></textarea>
                 <app-field-error [message]="formErrors.message('about_me')" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Family Details</label>
-                <textarea class="form-textarea" [class.input-invalid]="formErrors.show('family_details')" [(ngModel)]="profile.family_details" name="family" rows="3"
-                  placeholder="Brief family background... (min 10 characters)"
-                  (blur)="formErrors.touch('family_details')" (ngModelChange)="formErrors.clear('family_details')"></textarea>
-                <app-field-error [message]="formErrors.message('family_details')" />
               </div>
             </div>
           </section>
 
+          <section class="section-card card">
+            <div class="section-head">
+              <span class="section-icon">👨‍👩‍👧</span>
+              <div>
+                <h3>Family Details *</h3>
+                <p>Father, mother, brothers and sisters</p>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="family-grid">
+                <div class="family-card">
+                  <h4>Father</h4>
+                  <div class="form-group">
+                    <label class="form-label">Father name</label>
+                    <input class="form-input" [(ngModel)]="family.father.name" name="father_name" placeholder="Enter father name" />
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Alive *</label>
+                      <select class="form-select" [class.input-invalid]="formErrors.show('family_details') && !family.father.alive" [(ngModel)]="family.father.alive" name="father_alive" (ngModelChange)="formErrors.clear('family_details')">
+                        <option value="">Select</option>
+                        <option value="alive">Alive</option>
+                        <option value="late">Late</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Profession</label>
+                      <select class="form-select" [(ngModel)]="family.father.profession" name="father_job">
+                        <option value="">Select profession</option>
+                        @for (job of fatherProfessionOptions; track job) {
+                          <option [value]="job">{{ job }}</option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="family-card">
+                  <h4>Mother</h4>
+                  <div class="form-group">
+                    <label class="form-label">Mother name</label>
+                    <input class="form-input" [(ngModel)]="family.mother.name" name="mother_name" placeholder="Enter mother name" />
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Alive *</label>
+                      <select class="form-select" [class.input-invalid]="formErrors.show('family_details') && !family.mother.alive" [(ngModel)]="family.mother.alive" name="mother_alive" (ngModelChange)="formErrors.clear('family_details')">
+                        <option value="">Select</option>
+                        <option value="alive">Alive</option>
+                        <option value="late">Late</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Profession</label>
+                      <select class="form-select" [(ngModel)]="family.mother.profession" name="mother_job">
+                        <option value="">Select profession</option>
+                        @for (job of motherProfessionOptions; track job) {
+                          <option [value]="job">{{ job }}</option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="family-siblings">
+                <div class="family-sib-head">
+                  <div>
+                    <h4>Brothers</h4>
+                    <p class="family-count">{{ brotherCounts.total }} total · {{ brotherCounts.married }} married</p>
+                  </div>
+                  <button type="button" class="btn btn-outline btn-sm" (click)="addBrother()">+ Add brother</button>
+                </div>
+                @for (b of family.brothers; track b.id; let i = $index) {
+                  <div class="sibling-row">
+                    <span class="sib-num">{{ i + 1 }}</span>
+                    <select class="form-select" [(ngModel)]="b.order" [name]="'bro_order_' + b.id">
+                      <option value="">Elder / Younger</option>
+                      <option value="elder">Elder</option>
+                      <option value="younger">Younger</option>
+                    </select>
+                    <select class="form-select" [(ngModel)]="b.married" [name]="'bro_mar_' + b.id">
+                      <option value="">Married?</option>
+                      <option value="married">Married</option>
+                      <option value="unmarried">Unmarried</option>
+                    </select>
+                    <select class="form-select" [(ngModel)]="b.profession" [name]="'bro_job_' + b.id">
+                      <option value="">Profession</option>
+                      @for (job of brotherProfessionOptions(b.profession); track job) {
+                        <option [value]="job">{{ job }}</option>
+                      }
+                    </select>
+                    <button type="button" class="sib-remove" (click)="removeBrother(i)" aria-label="Remove brother">✕</button>
+                  </div>
+                }
+                @if (!family.brothers.length) {
+                  <p class="family-empty">No brothers added</p>
+                }
+              </div>
+
+              <div class="family-siblings">
+                <div class="family-sib-head">
+                  <div>
+                    <h4>Sisters</h4>
+                    <p class="family-count">{{ sisterCounts.total }} total · {{ sisterCounts.married }} married</p>
+                  </div>
+                  <button type="button" class="btn btn-outline btn-sm" (click)="addSister()">+ Add sister</button>
+                </div>
+                @for (s of family.sisters; track s.id; let i = $index) {
+                  <div class="sibling-row">
+                    <span class="sib-num">{{ i + 1 }}</span>
+                    <select class="form-select" [(ngModel)]="s.order" [name]="'sis_order_' + s.id">
+                      <option value="">Elder / Younger</option>
+                      <option value="elder">Elder</option>
+                      <option value="younger">Younger</option>
+                    </select>
+                    <select class="form-select" [(ngModel)]="s.married" [name]="'sis_mar_' + s.id">
+                      <option value="">Married?</option>
+                      <option value="married">Married</option>
+                      <option value="unmarried">Unmarried</option>
+                    </select>
+                    <select class="form-select" [(ngModel)]="s.profession" [name]="'sis_job_' + s.id">
+                      <option value="">Profession</option>
+                      @for (job of sisterProfessionOptions(s.profession); track job) {
+                        <option [value]="job">{{ job }}</option>
+                      }
+                    </select>
+                    <button type="button" class="sib-remove" (click)="removeSister(i)" aria-label="Remove sister">✕</button>
+                  </div>
+                }
+                @if (!family.sisters.length) {
+                  <p class="family-empty">No sisters added</p>
+                }
+              </div>
+              <app-field-error [message]="formErrors.message('family_details')" />
+            </div>
+          </section>
+
           <div class="form-actions card">
-            <p class="form-actions-hint">
-              @if (isAdminForm) {
-                Fields optional — empty values show as --- on the site.
-              } @else {
-                Review your details before saving. A complete profile gets more responses.
+            <div class="form-actions-copy">
+              <p class="form-actions-hint">
+                @if (isAdminForm) {
+                  Fields optional — empty values show as --- on the site.
+                } @else {
+                  Review your details before saving. A complete profile gets more responses.
+                }
+              </p>
+              @if (message() && messageType() === 'error') {
+                <p class="save-inline-error">{{ message() }}</p>
               }
-            </p>
+            </div>
             <div class="form-actions-btns">
-              <button class="btn btn-primary btn-lg save-btn" type="submit" [disabled]="saving()">
+              <button class="btn btn-primary btn-lg save-btn" type="button" (click)="save()" [disabled]="saving()">
                 @if (saving()) {
                   <span class="btn-spinner"></span> Saving...
                 } @else if (adminCreateMode()) {
@@ -1010,6 +1178,9 @@ function joinMultiSelect(values: string[]): string | undefined {
       margin-bottom: 1.25rem;
       border-radius: 10px;
       font-weight: 500;
+      position: sticky;
+      top: 0.75rem;
+      z-index: 30;
     }
 
     .profile-top {
@@ -1343,12 +1514,20 @@ function joinMultiSelect(values: string[]): string | undefined {
       border: 1px solid rgba(212, 175, 55, 0.25);
       flex-wrap: wrap;
     }
+    .form-actions-copy { flex: 1; min-width: 200px; }
     .form-actions-hint {
       flex: 1;
       font-size: 0.88rem;
       color: var(--text-muted);
       margin: 0;
       min-width: 200px;
+    }
+    .save-inline-error {
+      margin: 0.55rem 0 0;
+      color: #b91c1c;
+      font-weight: 700;
+      font-size: 0.92rem;
+      line-height: 1.4;
     }
     .field-hint {
       font-size: 0.82rem;
@@ -1478,6 +1657,83 @@ function joinMultiSelect(values: string[]): string | undefined {
       border-color: #dc2626;
     }
 
+    .family-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .family-card {
+      background: linear-gradient(180deg, #FFF8F3 0%, #fff 100%);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      border-radius: 14px;
+      padding: 1rem 1.1rem 0.35rem;
+      box-shadow: 0 4px 14px rgba(155, 27, 48, 0.05);
+    }
+    .family-card h4,
+    .family-sib-head h4 {
+      margin: 0 0 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .family-siblings {
+      margin-top: 0.35rem;
+      padding: 1rem 1.1rem;
+      background: #FDFAF8;
+      border: 1px solid #EDE0D6;
+      border-radius: 14px;
+    }
+    .family-siblings + .family-siblings { margin-top: 1rem; }
+    .family-sib-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.85rem;
+    }
+    .family-count {
+      margin: 0.15rem 0 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #b45309;
+    }
+    .family-empty {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .sibling-row {
+      display: grid;
+      grid-template-columns: 1.75rem 1fr 1fr 1.4fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.55rem;
+    }
+    .sib-num {
+      width: 1.75rem;
+      height: 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .sib-remove {
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid #fecaca;
+      background: #fff;
+      color: #dc2626;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .sib-remove:hover { background: #fef2f2; }
+
     @media (max-width: 640px) {
       .profile-top {
         flex-direction: column;
@@ -1494,6 +1750,12 @@ function joinMultiSelect(values: string[]): string | undefined {
       .save-btn { width: 100%; }
       .contact-row { grid-template-columns: 1fr; }
       .btn-remove { width: 100%; margin-bottom: 0; }
+      .family-grid { grid-template-columns: 1fr; }
+      .sibling-row { grid-template-columns: 1.75rem 1fr auto; }
+      .sibling-row .form-select,
+      .sibling-row .form-input { grid-column: 1 / -1; }
+      .sibling-row .sib-num { grid-row: 1; }
+      .sibling-row .sib-remove { grid-row: 1; grid-column: 3; }
     }
   `],
 })
@@ -1521,6 +1783,7 @@ export class MyProfileComponent implements OnInit {
   professionCategory = '';
   professionChoice = '';
   professionOtherText = '';
+  family: FamilyDetails = emptyFamilyDetails();
   reqProfessionCategory = '';
   reqProfessionChoice = '';
   reqProfessionOtherText = '';
@@ -1678,21 +1941,24 @@ export class MyProfileComponent implements OnInit {
     'first_name', 'gender', 'date_of_birth', 'height_cm', 'weight_kg',
     'marital_status', 'color', 'disability', 'religion', 'sect', 'caste',
     'guardian_type', 'guardian_name', 'languages',
-    'city', 'province', 'education', 'profession',
-    'about_me', 'family_details',
+    'city', 'province', 'education', 'profession', 'hafiz_quran',
   ];
+
+  private isFilled(value: unknown): boolean {
+    const text = String(value ?? '').trim();
+    return text !== '' && text !== '---';
+  }
 
   get completionPercent(): number {
     const p = this.profile;
     const filled = this.completionFields.filter((key) => {
       if (key === 'first_name') {
-        return this.fullName.trim() !== '' || (!!p.first_name && String(p.first_name).trim() !== '');
+        return this.fullName.trim() !== '';
       }
       if (key === 'languages') {
-        return this.selectedLanguages.length > 0 || !!(p.languages && String(p.languages).trim());
+        return this.selectedLanguages.length > 0;
       }
-      const val = p[key];
-      return val !== undefined && val !== null && String(val).trim() !== '';
+      return this.isFilled(p[key]);
     }).length;
     const hasPhone = this.contacts.some((c) => c.type === 'phone' && c.number.trim());
     const hasRequiredPartnerAge = (
@@ -1706,12 +1972,54 @@ export class MyProfileComponent implements OnInit {
         && !!this.abroadHouseType
         && this.abroadHouseLocation.trim().length >= 5
       );
-    const total = this.completionFields.length + 3;
+    const familyDone = isFamilyDetailsComplete(this.family);
+    const total = this.completionFields.length + 4;
     const done = filled
       + (hasPhone ? 1 : 0)
       + (hasRequiredPartnerAge ? 1 : 0)
-      + (hasResidence ? 1 : 0);
+      + (hasResidence ? 1 : 0)
+      + (familyDone ? 1 : 0);
     return Math.round((done / total) * 100);
+  }
+
+  get brotherCounts(): { total: number; married: number; unmarried: number } {
+    return familyCounts(this.family.brothers);
+  }
+
+  get sisterCounts(): { total: number; married: number; unmarried: number } {
+    return familyCounts(this.family.sisters);
+  }
+
+  get fatherProfessionOptions(): string[] {
+    return familyProfessionOptions('father', this.family.father.profession);
+  }
+
+  get motherProfessionOptions(): string[] {
+    return familyProfessionOptions('mother', this.family.mother.profession);
+  }
+
+  brotherProfessionOptions(current?: string): string[] {
+    return familyProfessionOptions('brother', current);
+  }
+
+  sisterProfessionOptions(current?: string): string[] {
+    return familyProfessionOptions('sister', current);
+  }
+
+  addBrother(): void {
+    this.family.brothers = [...this.family.brothers, emptySibling()];
+  }
+
+  addSister(): void {
+    this.family.sisters = [...this.family.sisters, emptySibling()];
+  }
+
+  removeBrother(index: number): void {
+    this.family.brothers = this.family.brothers.filter((_, i) => i !== index);
+  }
+
+  removeSister(index: number): void {
+    this.family.sisters = this.family.sisters.filter((_, i) => i !== index);
   }
 
   get availableCities(): string[] {
@@ -2067,6 +2375,13 @@ export class MyProfileComponent implements OnInit {
     }
   }
 
+  clearReqProfessionPreference(): void {
+    this.reqProfessionCategory = '';
+    this.reqProfessionChoice = '';
+    this.reqProfessionOtherText = '';
+    this.selectedReqProfessions = [];
+  }
+
   syncProfessionField(): void {
     this.profile.profession = formatProfession(
       this.professionCategory,
@@ -2197,6 +2512,9 @@ export class MyProfileComponent implements OnInit {
     this.professionCategory = parsed.category;
     this.professionChoice = parsed.choice;
     this.professionOtherText = parsed.otherText;
+    if (!this.profile.hafiz_quran && parsed.choice === 'Hafiz-e-Quran') {
+      this.profile.hafiz_quran = 'Yes';
+    }
   }
 
   private syncLanguageCategoriesFromSelection(): void {
@@ -2356,6 +2674,7 @@ export class MyProfileComponent implements OnInit {
     this.reqMinInches = null;
     this.reqMaxFeet = null;
     this.reqMaxInches = null;
+    this.family = emptyFamilyDetails();
     this.loading.set(false);
   }
 
@@ -2399,7 +2718,7 @@ export class MyProfileComponent implements OnInit {
         number: c.number,
       }));
     } else {
-      this.contacts = [{ type: 'phone', number: '' }];
+      this.contacts = [{ type: 'phone', number: data.user_phone || '' }];
     }
     if (data.partner_preferences) {
       this.requirements = { ...this.requirements, ...data.partner_preferences };
@@ -2413,7 +2732,28 @@ export class MyProfileComponent implements OnInit {
     this.loadDisabilityFields();
     this.loadProfessionFields();
     this.loadResidenceFields();
+    this.family = parseFamilyDetails(data.family_details);
     this.loading.set(false);
+  }
+
+  private scrollToFirstError(field: string): void {
+    setTimeout(() => {
+      const invalid = document.querySelector('.input-invalid, .input-invalid-wrap') as HTMLElement | null;
+      const named = document.querySelector(`[name="${field}"]`) as HTMLElement | null;
+      const el = invalid || named;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLSelectElement ||
+          el instanceof HTMLTextAreaElement
+        ) {
+          el.focus();
+        }
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 50);
   }
 
   save(): void {
@@ -2424,6 +2764,9 @@ export class MyProfileComponent implements OnInit {
     this.syncProfessionField();
     this.syncResidenceToProfile();
     this.syncReqMultiToRequirements();
+    this.profile.family_details = isFamilyDetailsEmpty(this.family)
+      ? ''
+      : serializeFamilyDetails(this.family);
 
     const names = splitFullName(this.fullName);
     this.profile.first_name = names.first_name;
@@ -2454,9 +2797,11 @@ export class MyProfileComponent implements OnInit {
       country: this.profile.country,
       education: this.profile.education,
       profession: this.profile.profession,
+      hafiz_quran: this.profile.hafiz_quran,
       caste: this.profile.caste,
       about_me: this.profile.about_me,
       family_details: this.profile.family_details,
+      familyComplete: this.isAdminForm || isFamilyDetailsComplete(this.family),
       languages: this.selectedLanguages,
       showPakistanResidence: this.showPakistanResidence,
       showAbroadResidence: this.showAbroadResidence,
@@ -2478,6 +2823,7 @@ export class MyProfileComponent implements OnInit {
     if (Object.keys(errors).length) {
       this.message.set(firstError(errors) ?? 'Please fix the highlighted fields');
       this.messageType.set('error');
+      this.scrollToFirstError(Object.keys(errors)[0]);
       return;
     }
 
@@ -2512,6 +2858,7 @@ export class MyProfileComponent implements OnInit {
       province: this.profile.province || undefined,
       education: this.profile.education || undefined,
       profession: this.profile.profession || undefined,
+      hafiz_quran: this.profile.hafiz_quran || undefined,
       about_me: this.profile.about_me || undefined,
       looking_for: this.profile.looking_for || undefined,
       family_details: this.profile.family_details || undefined,
@@ -2548,7 +2895,7 @@ export class MyProfileComponent implements OnInit {
         'abroad_country', 'abroad_house_own_location', 'abroad_house_rent_location',
         'guardian_type', 'guardian_name',
         'profile_photo', 'weight_kg',
-        'province', 'education', 'profession', 'about_me',
+        'province', 'education', 'profession', 'hafiz_quran', 'about_me',
         'looking_for', 'family_details', 'height_cm',
       ];
       for (const key of optionalNullables) {
@@ -2595,6 +2942,7 @@ export class MyProfileComponent implements OnInit {
         this.formErrors.reset();
         this.message.set(this.adminCreateMode() ? 'Profile created successfully!' : 'Profile saved successfully!');
         this.messageType.set('success');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         if (res.data?.user_email) {
           this.accountEmail = res.data.user_email;
         }
@@ -2609,8 +2957,9 @@ export class MyProfileComponent implements OnInit {
       },
       error: (err) => {
         this.saving.set(false);
-        this.message.set(err.error?.message || 'Failed to save');
+        this.message.set(err.error?.message || 'Could not save profile. Please try again.');
         this.messageType.set('error');
+        this.scrollToFirstError('full_name');
       },
     });
   }

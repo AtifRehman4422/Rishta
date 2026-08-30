@@ -109,7 +109,7 @@ export class AboutComponent implements OnInit {
     this.title.setTitle('About Us | PK Rishta — Pakistan Matrimonial Platform');
     this.meta.updateTag({
       name: 'description',
-      content: 'Learn about PK Rishta — Pakistan\'s trusted halal matrimonial platform for verified rishtay, family connections, and safe contact sharing.',
+      content: 'Learn about PK Rishta — Pakistan\'s trusted halal matrimonial platform for verified matches, family connections, and safe contact sharing.',
     });
   }
 }

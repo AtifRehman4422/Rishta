@@ -58,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const BrandLogo(height: 150, animated: true, heroTag: 'pk-logo')
+                const BrandLogo(height: 240, animated: true, heroTag: 'pk-logo')
                     .animate()
                     .fadeIn(duration: 500.ms)
                     .scale(
@@ -67,18 +67,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       duration: 700.ms,
                       curve: Curves.easeOutBack,
                     ),
-                const SizedBox(height: 24),
-                Text(
-                  'Making Meaningful Matches',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.goldLight,
-                        letterSpacing: 1.2,
-                      ),
-                )
-                    .animate(delay: 400.ms)
-                    .fadeIn(duration: 500.ms)
-                    .slideY(begin: 0.2, end: 0),
-                const SizedBox(height: 36),
+                const SizedBox(height: 40),
                 SizedBox(
                   width: 28,
                   height: 28,

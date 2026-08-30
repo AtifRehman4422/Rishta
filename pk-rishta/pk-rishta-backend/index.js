@@ -8,6 +8,7 @@ const cors = require('cors');
 
 const pool = require('./db');
 const { setupSecurity, isProduction } = require('./middleware/security');
+const { warnIfSmtpMisconfigured } = require('./utils/mailer');
 
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profiles');
@@ -15,6 +16,7 @@ const contactRequestRoutes = require('./routes/contactRequests');
 const complaintRoutes = require('./routes/complaints');
 const contactRoutes = require('./routes/contact');
 const visitRoutes = require('./routes/visits');
+const favoriteRoutes = require('./routes/favorites');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
@@ -38,9 +40,12 @@ function isAllowedOrigin(origin) {
 
   if (configured.includes(origin)) return true;
 
-  // Dev: Angular (4200) + Flutter web (any localhost port, e.g. Chrome mobile view)
+  // Dev: Angular / Flutter web on localhost, and phones on the LAN.
   if (!isProduction) {
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+      return true;
+    }
+    if (/^https?:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/i.test(origin)) {
       return true;
     }
   }
@@ -88,6 +93,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/contact', contactRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/visits', visitRoutes);
+app.use('/api/favorites', favoriteRoutes);
 app.use('/api/dropdowns', require('./routes/dropdowns'));
 app.use('/api/admin', adminRoutes);
 
@@ -118,13 +124,15 @@ function startServer() {
     return;
   }
 
-  http.createServer(app).listen(PORT, () => {
+  http.createServer(app).listen(PORT, '0.0.0.0', () => {
     console.log(`PK Rishta Backend running on port ${PORT}`);
     if (!isProduction) {
       console.log(`Primary frontend: ${FRONTEND_URL}`);
-      console.log('Dev CORS: also allowing localhost / 127.0.0.1 (Flutter web + Angular)');
+      console.log('Listening on 0.0.0.0 so physical phones can use this PC LAN IP:3000');
+      console.log('Dev CORS: localhost + private LAN (Flutter web + Angular + real devices)');
       console.log('Tip: Use HTTPS in production so passwords and data are encrypted on the network.');
     }
+    warnIfSmtpMisconfigured();
   });
 }
 

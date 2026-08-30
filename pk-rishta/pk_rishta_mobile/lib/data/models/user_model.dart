@@ -3,8 +3,10 @@ class AppUser {
     required this.id,
     required this.email,
     this.role = 'user',
+    this.profileId,
     this.firstName,
     this.lastName,
+    this.gender,
     this.city,
     this.province,
     this.isProfileComplete = false,
@@ -15,8 +17,10 @@ class AppUser {
   final String id;
   final String email;
   final String role;
+  final String? profileId;
   final String? firstName;
   final String? lastName;
+  final String? gender;
   final String? city;
   final String? province;
   final bool isProfileComplete;
@@ -43,8 +47,10 @@ class AppUser {
       id: json['id'].toString(),
       email: (json['email'] ?? '') as String,
       role: (json['role'] ?? 'user') as String,
+      profileId: json['profile_id']?.toString(),
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
+      gender: json['gender'] as String?,
       city: json['city'] as String?,
       province: json['province'] as String?,
       isProfileComplete: json['is_profile_complete'] == true,

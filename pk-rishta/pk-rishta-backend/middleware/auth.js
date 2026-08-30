@@ -42,6 +42,27 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+async function requireCompleteProfile(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  if (req.user.role === 'admin') return next();
+
+  try {
+    const result = await pool.query(
+      'SELECT is_profile_complete FROM profiles WHERE user_id = $1',
+      [req.user.id]
+    );
+    if (result.rows[0]?.is_profile_complete) return next();
+    return res.status(403).json({
+      success: false,
+      message: 'Complete your profile to view other members',
+    });
+  } catch {
+    return res.status(500).json({ success: false, message: 'Request failed' });
+  }
+}
+
 async function optionalAuthenticate(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
@@ -66,4 +87,11 @@ async function optionalAuthenticate(req, res, next) {
   next();
 }
 
-module.exports = { generateToken, authenticate, optionalAuthenticate, requireAdmin, JWT_SECRET };
+module.exports = {
+  generateToken,
+  authenticate,
+  optionalAuthenticate,
+  requireAdmin,
+  requireCompleteProfile,
+  JWT_SECRET,
+};

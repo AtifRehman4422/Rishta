@@ -7,12 +7,25 @@ import { formatHeightCm } from '../../core/utils/height';
 import { formatProfileLocation, isOverseasProvince } from '../../core/constants/pakistan-locations';
 import { AuthService } from '../../core/services/auth.service';
 import { ProfileService } from '../../core/services/profile.service';
+import { AdminService } from '../../core/services/admin.service';
+import { FavoritesService } from '../../core/services/favorites.service';
 import { ProfileAvatarComponent } from '../../shared/components/profile-avatar/profile-avatar';
 import { FormErrorState } from '../../core/utils/form-error-state';
 import { firstError, validateComplaint } from '../../core/utils/validation';
 import { FieldErrorComponent } from '../../shared/components/field-error/field-error';
 import { AdSlotComponent } from '../../shared/components/ad-slot/ad-slot';
 import { ADSENSE_SLOTS } from '../../core/constants/adsense';
+import {
+  aliveLabel,
+  familyCounts,
+  familyDetailsDisplay,
+  isStructuredFamilyDetails,
+  marriedLabel,
+  parseFamilyDetails,
+  siblingOrderLabel,
+  type FamilyDetails,
+  type FamilySibling,
+} from '../../core/utils/family-details';
 
 @Component({
   selector: 'app-profile-detail',
@@ -20,6 +33,24 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
   template: `
     @if (loading()) {
       <div class="loading-center"><div class="spinner"></div></div>
+    } @else if (!canViewThisProfile) {
+      <div class="container" style="padding: 3rem 1rem;">
+        <div class="card" style="max-width: 480px; margin: 0 auto; text-align: center; padding: 2rem;">
+          <span style="font-size: 2.4rem;">🔒</span>
+          @if (!auth.isLoggedIn()) {
+            <h3>Login to view this profile</h3>
+            <p>Profiles are only visible to registered members with a complete profile.</p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+              <a routerLink="/login" class="btn btn-primary">Login</a>
+              <a routerLink="/register" class="btn btn-outline">Register Free</a>
+            </div>
+          } @else {
+            <h3>Complete your profile first</h3>
+            <p>Fill all required fields to view other members.</p>
+            <a routerLink="/my-profile" class="btn btn-primary" style="margin-top: 1rem;">Complete Your Profile</a>
+          }
+        </div>
+      </div>
     } @else if (profile()) {
       <div class="profile-page">
         <div class="profile-hero bg-page-header">
@@ -37,12 +68,28 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                 <p class="profile-meta">{{ profile()!.age }} years · {{ formatProfileLocation(profile()!) }}</p>
                 <div class="badges">
                   @if (profile()!.is_verified) { <span class="badge badge-verified">✓ Verified</span> }
+                  @if (auth.isAdmin() && profile()!.admin_rating) {
+                    <span class="rating-stars" title="Attractiveness">{{ ratingStars(profile()!.admin_rating) }}</span>
+                  }
                   <span class="badge">{{ profile()!.gender === 'male' ? 'Male' : 'Female' }}</span>
                 </div>
               </div>
-              @if (auth.isLoggedIn() && !auth.isAdmin() && contactStatus() !== 'own') {
+              @if (!auth.isAdmin() && contactStatus() !== 'own') {
                 <div class="profile-actions">
-                  <button type="button" class="complain-btn" (click)="showComplaintModal.set(true)">
+                  <button
+                    type="button"
+                    class="fav-hero-btn"
+                    [class.is-on]="favorites.isFavorite(profile()!.id)"
+                    [attr.aria-label]="favorites.isFavorite(profile()!.id) ? 'Remove from favorites' : 'Save to favorites'"
+                    (click)="toggleFavorite()"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" [attr.fill]="favorites.isFavorite(profile()!.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    <span>{{ favorites.isFavorite(profile()!.id) ? 'Saved' : 'Save' }}</span>
+                  </button>
+                  @if (auth.isLoggedIn()) {
+                  <button type="button" class="complain-btn" (click)="openComplaintModal()">
                     <span class="complain-icon-wrap">
                       <svg class="complain-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -53,6 +100,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                       <span class="complain-sub">شکایت درج کریں</span>
                     </span>
                   </button>
+                  }
                 </div>
               }
             </div>
@@ -84,6 +132,28 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
               } @else {
                 <p class="process-hint">No contact numbers on this profile.</p>
               }
+              <div class="request-limit-row">
+                <label for="request-limit">This user can send (pending slots, default 3)</label>
+                <select
+                  id="request-limit"
+                  class="form-select"
+                  [(ngModel)]="requestLimitDraft"
+                  name="requestLimitDraft"
+                >
+                  @for (n of requestSlotOptions; track n) {
+                    <option [ngValue]="n">{{ n }}{{ n === 3 ? ' — default' : '' }}</option>
+                  }
+                </select>
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  (click)="saveRequestLimit()"
+                  [disabled]="savingRequestLimit()"
+                >
+                  {{ savingRequestLimit() ? 'Saving...' : 'Save slots' }}
+                </button>
+              </div>
+              <p class="process-hint">How many unanswered contact requests this member can send at once. Extra slots apply only to this profile.</p>
               <div class="admin-actions">
                 <a routerLink="/admin/profiles" class="btn btn-outline btn-sm admin-back-btn">← Manage Profiles</a>
               </div>
@@ -96,7 +166,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                 <h3>Interested in this profile?</h3>
                 <p>Request their contact number. The profile owner and admin can approve your request.</p>
                 @if (pendingRemaining() !== null) {
-                  <p class="quota-hint">{{ pendingRemaining() }} of 3 pending request slots remaining. Unanswered requests expire after 2 days.</p>
+                  <p class="quota-hint">{{ pendingRemaining() }} of {{ pendingLimit() }} pending request slots remaining. Unanswered requests expire after 2 days.</p>
                 }
               </div>
               <button class="btn btn-primary btn-lg" (click)="requestContact()" [disabled]="requesting()">
@@ -108,7 +178,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
           @if (auth.isLoggedIn() && !auth.isAdmin() && contactStatus() !== 'own' && !canRequestContact() && isPendingLimitReached()) {
             <div class="status-card card warn-card animate-fade-in-up">
               <h3>⏳ Pending Limit Reached</h3>
-              <p>You already have 3 pending contact requests. Wait for a response, or for a request to expire after 2 days.</p>
+              <p>You already have {{ pendingLimit() }} pending contact requests. Wait for a response, or for a pending request to expire after 2 days.</p>
             </div>
           }
 
@@ -146,9 +216,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
           @if (accessStatus()?.status === 'approved' && accessStatus()!.contacts?.length) {
             <div class="status-card card contact-card animate-fade-in-up">
               <h3>📞 Contact Number</h3>
-              @if (accessStatus()!.expires_at) {
-                <p class="expiry-note">Visible until {{ formatDate(accessStatus()!.expires_at!) }} (2 days access)</p>
-              }
+              <p class="contact-shared-note">Both you and this profile can see each other's numbers. Either party can cancel the connection.</p>
               <div class="contact-list">
                 @for (c of accessStatus()!.contacts!; track c.id || c.number) {
                   <div class="contact-item">
@@ -156,6 +224,11 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                     <a [href]="contactLink(c)" class="contact-number">{{ c.number }}</a>
                   </div>
                 }
+              </div>
+              <div style="margin-top: 1rem;">
+                <button class="btn btn-danger btn-sm" (click)="cancelConnection()" [disabled]="cancelling()">
+                  {{ cancelling() ? 'Cancelling...' : '✕ Cancel Connection' }}
+                </button>
               </div>
             </div>
           } @else if (accessStatus()?.status === 'approved' && !accessStatus()!.contacts?.length) {
@@ -168,7 +241,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
           @if (accessStatus()?.status === 'expired') {
             <div class="status-card card warn-card animate-fade-in-up">
               <h3>⏰ Contact Access Expired</h3>
-              <p>Your 2-day contact access has ended. Submit a new request if needed.</p>
+              <p>Your contact access has ended. Submit a new request if needed.</p>
             </div>
           }
 
@@ -244,10 +317,49 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                   }
                 </div>
               }
-              @if (profile()!.family_details) {
+              @if (familyView()) {
                 <div class="detail-card card animate-fade-in-up delay-2">
                   <h3>Family Details</h3>
-                  <p>{{ profile()!.family_details }}</p>
+                  @if (structuredFamily()) {
+                    <div class="family-view">
+                      <div class="family-parent-grid">
+                        <div class="family-parent-card">
+                          <span>Father</span>
+                          <strong>{{ structuredFamily()!.father.name || 'Name not added' }}</strong>
+                          <p>{{ aliveLabel(structuredFamily()!.father.alive) || '—' }}{{ structuredFamily()!.father.profession ? ' · ' + structuredFamily()!.father.profession : '' }}</p>
+                        </div>
+                        <div class="family-parent-card">
+                          <span>Mother</span>
+                          <strong>{{ structuredFamily()!.mother.name || 'Name not added' }}</strong>
+                          <p>{{ aliveLabel(structuredFamily()!.mother.alive) || '—' }}{{ structuredFamily()!.mother.profession ? ' · ' + structuredFamily()!.mother.profession : '' }}</p>
+                        </div>
+                      </div>
+                      @if (brotherCounts().total) {
+                        <div class="family-chip">Brothers: {{ brotherCounts().total }} total · {{ brotherCounts().married }} married</div>
+                        <div class="info-list family-sib-list">
+                          @for (b of structuredFamily()!.brothers; track b.id; let i = $index) {
+                            <div class="info-item">
+                              <span>Brother {{ i + 1 }}</span>
+                              <strong>{{ siblingLine(b) }}</strong>
+                            </div>
+                          }
+                        </div>
+                      }
+                      @if (sisterCounts().total) {
+                        <div class="family-chip">Sisters: {{ sisterCounts().total }} total · {{ sisterCounts().married }} married</div>
+                        <div class="info-list family-sib-list">
+                          @for (s of structuredFamily()!.sisters; track s.id; let i = $index) {
+                            <div class="info-item">
+                              <span>Sister {{ i + 1 }}</span>
+                              <strong>{{ siblingLine(s) }}</strong>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p class="family-legacy">{{ familyView() }}</p>
+                  }
                 </div>
               }
             </div>
@@ -358,6 +470,11 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
               ></textarea>
               <app-field-error [message]="complaintErrors.message('description')" />
             </div>
+            @if (complaintMessage()) {
+              <div class="alert" [class.alert-success]="complaintMessageType() === 'success'" [class.alert-error]="complaintMessageType() === 'error'">
+                {{ complaintMessage() }}
+              </div>
+            }
             <div class="modal-actions">
               <button class="btn btn-outline" (click)="showComplaintModal.set(false)">Cancel</button>
               <button class="btn btn-danger" (click)="submitComplaint()" [disabled]="complaintSubmitting()">
@@ -374,8 +491,34 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
     .profile-header { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
     .profile-info h1 { font-size: 2rem; margin-bottom: 0.25rem; }
     .profile-meta { opacity: 0.85; margin-bottom: 0.75rem; }
-    .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .rating-stars {
+      color: #FFD700;
+      font-size: 1.25rem;
+      letter-spacing: 0.06em;
+      line-height: 1;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
     .profile-actions { margin-left: auto; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; }
+    .fav-hero-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 1rem 0.5rem 0.55rem;
+      border-radius: 50px;
+      border: 1.5px solid rgba(255, 193, 203, 0.55);
+      background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%);
+      color: #fff;
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.25s ease;
+    }
+    .fav-hero-btn svg { width: 20px; height: 20px; }
+    .fav-hero-btn.is-on { color: #FFC1CB; border-color: #FFC1CB; }
+    .fav-hero-btn:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.16); }
     .request-btn { font-weight: 700; min-width: 220px; text-align: center; }
     .complain-btn {
       display: inline-flex;
@@ -445,7 +588,21 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       margin-top: 1rem;
     }
     .admin-back-btn { margin-top: 0; }
+    .request-limit-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.85rem;
+    }
+    .request-limit-row label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .request-limit-row .form-select { max-width: 140px; }
     .expiry-note { font-size: 0.82rem; color: #b45309; margin-bottom: 0.75rem; }
+    .contact-shared-note { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.5; }
     .contact-list { display: flex; flex-direction: column; gap: 0.5rem; }
     .contact-item { display: flex; align-items: center; gap: 1rem; }
     .contact-type { font-size: 0.82rem; color: var(--text-muted); min-width: 80px; }
@@ -458,6 +615,45 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       color: var(--primary);
     }
     .detail-card p { color: var(--text-muted); line-height: 1.8; }
+    .family-view { display: flex; flex-direction: column; gap: 0.85rem; }
+    .family-parent-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+    }
+    .family-parent-card {
+      background: linear-gradient(180deg, #FFF8F3 0%, #fff 100%);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+    }
+    .family-parent-card span {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 0.2rem;
+    }
+    .family-parent-card strong { font-size: 1rem; color: var(--text); }
+    .family-parent-card p {
+      margin: 0.25rem 0 0;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    .family-chip {
+      display: inline-flex;
+      align-self: flex-start;
+      background: rgba(155, 27, 48, 0.08);
+      color: var(--primary);
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.3rem 0.75rem;
+    }
+    .family-sib-list { margin-top: 0.15rem; }
+    .family-legacy { white-space: pre-line; }
     .req-notes { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
     .info-list { display: flex; flex-direction: column; gap: 0.85rem; }
     .info-item {
@@ -511,6 +707,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
         gap: 0.25rem;
       }
       .info-item strong { text-align: left; }
+      .family-parent-grid { grid-template-columns: 1fr; }
     }
   `],
 })
@@ -519,10 +716,20 @@ export class ProfileDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
+  private readonly adminService = inject(AdminService);
+  readonly favorites = inject(FavoritesService);
   readonly adSlots = ADSENSE_SLOTS;
   readonly formatHeightCm = formatHeightCm;
   readonly formatProfileLocation = formatProfileLocation;
   readonly isOverseasProvince = isOverseasProvince;
+  readonly aliveLabel = aliveLabel;
+  readonly requestSlotOptions = [3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30];
+
+  ratingStars(n?: number | null): string {
+    const count = Number(n);
+    if (!count || count < 1) return '';
+    return '★'.repeat(Math.min(5, count));
+  }
 
   profile = signal<Profile | null>(null);
   accessStatus = signal<ContactAccessStatus | null>(null);
@@ -534,15 +741,26 @@ export class ProfileDetailComponent implements OnInit {
   complaintCategory = 'fake_profile';
   complaintDescription = '';
   complaintSubmitting = signal(false);
+  complaintMessage = signal('');
+  complaintMessageType = signal<'success' | 'error'>('error');
+  cancelling = signal(false);
+  savingRequestLimit = signal(false);
+  requestLimitDraft = 3;
   readonly complaintErrors = new FormErrorState();
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) { this.router.navigate(['/search']); return; }
 
+    if (!this.canViewThisProfile) {
+      this.loading.set(false);
+      return;
+    }
+
     this.profileService.getById(id).subscribe({
       next: (res) => {
         this.profile.set(res.data);
+        this.requestLimitDraft = res.data.contact_request_limit || 3;
         this.loading.set(false);
         if (this.auth.isLoggedIn() && !this.auth.isAdmin()) {
           this.loadAccessStatus(id);
@@ -550,6 +768,13 @@ export class ProfileDetailComponent implements OnInit {
       },
       error: () => { this.loading.set(false); this.router.navigate(['/search']); },
     });
+  }
+
+  get canViewThisProfile(): boolean {
+    if (this.auth.isAdmin()) return true;
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id && this.auth.currentUser()?.profile_id === id) return true;
+    return this.auth.isLoggedIn() && !!this.auth.currentUser()?.is_profile_complete;
   }
 
   loadAccessStatus(profileId: string): void {
@@ -591,6 +816,37 @@ export class ProfileDetailComponent implements OnInit {
     return remaining === undefined ? null : remaining;
   }
 
+  pendingLimit(): number {
+    return this.accessStatus()?.pending_limit ?? this.accessStatus()?.daily_limit ?? 3;
+  }
+
+  toggleFavorite(): void {
+    const p = this.profile();
+    if (!p) return;
+    this.favorites.toggle(p.id, p);
+  }
+
+  saveRequestLimit(): void {
+    const p = this.profile();
+    if (!p) return;
+    this.savingRequestLimit.set(true);
+    this.adminService.setRequestLimit(p.id, this.requestLimitDraft).subscribe({
+      next: (res) => {
+        this.savingRequestLimit.set(false);
+        this.profile.update((x) => x
+          ? { ...x, contact_request_limit: res.data?.contact_request_limit ?? (this.requestLimitDraft === 3 ? null : this.requestLimitDraft) }
+          : x);
+        this.message.set(res.message || 'Request slots updated');
+        this.messageType.set('success');
+      },
+      error: (err) => {
+        this.savingRequestLimit.set(false);
+        this.message.set(err.error?.message || 'Could not update request slots');
+        this.messageType.set('error');
+      },
+    });
+  }
+
   requestContact(): void {
     const p = this.profile();
     if (!p) return;
@@ -606,14 +862,47 @@ export class ProfileDetailComponent implements OnInit {
         this.requesting.set(false);
         this.loadAccessStatus(p.id);
         this.message.set(res.message || 'Request sent to the user and admin.');
-        this.messageType.set('info');
+        this.messageType.set('success');
       },
       error: (err) => {
         this.requesting.set(false);
-        this.message.set(err.error?.message || 'Failed to submit request');
+        const status = err.status as number | undefined;
+        const apiMessage = err.error?.message || 'Failed to submit request';
+        if (status === 401) {
+          this.message.set('Please login again to request a contact number.');
+        } else {
+          this.message.set(apiMessage);
+        }
         this.messageType.set('error');
       },
     });
+  }
+
+  cancelConnection(): void {
+    const status = this.accessStatus();
+    if (!status?.request_id) return;
+
+    this.cancelling.set(true);
+    this.profileService.cancelContactRequest(status.request_id).subscribe({
+      next: (res) => {
+        this.cancelling.set(false);
+        const p = this.profile();
+        if (p) this.loadAccessStatus(p.id);
+        this.message.set(res.message || 'Connection cancelled');
+        this.messageType.set('info');
+      },
+      error: (err) => {
+        this.cancelling.set(false);
+        this.message.set(err.error?.message || 'Failed to cancel connection');
+        this.messageType.set('error');
+      },
+    });
+  }
+
+  openComplaintModal(): void {
+    this.complaintMessage.set('');
+    this.complaintErrors.reset();
+    this.showComplaintModal.set(true);
   }
 
   submitComplaint(): void {
@@ -624,24 +913,36 @@ export class ProfileDetailComponent implements OnInit {
     const errors = validateComplaint(this.complaintDescription, this.complaintCategory);
     this.complaintErrors.setAll(errors);
     if (Object.keys(errors).length) {
+      this.complaintMessage.set(firstError(errors) ?? 'Please fix the errors');
+      this.complaintMessageType.set('error');
       this.message.set(firstError(errors) ?? 'Please fix the errors');
       this.messageType.set('error');
       return;
     }
 
     this.complaintSubmitting.set(true);
+    this.complaintMessage.set('');
     this.profileService.submitComplaint(p.id, this.complaintCategory, this.complaintDescription).subscribe({
       next: (res) => {
         this.complaintSubmitting.set(false);
-        this.showComplaintModal.set(false);
+        const ok = res.message || 'Report submitted successfully. Admin will review it.';
+        this.complaintMessage.set(ok);
+        this.complaintMessageType.set('success');
+        this.message.set(ok);
+        this.messageType.set('success');
         this.complaintDescription = '';
         this.complaintErrors.reset();
-        this.message.set(res.message || 'Complaint submitted successfully');
-        this.messageType.set('success');
+        setTimeout(() => this.showComplaintModal.set(false), 1200);
       },
       error: (err) => {
         this.complaintSubmitting.set(false);
-        this.message.set(err.error?.message || 'Failed to submit complaint');
+        const status = err.status as number | undefined;
+        const apiMessage = status === 401
+          ? 'Please login again to submit a report.'
+          : (err.error?.message || 'Failed to submit report');
+        this.complaintMessage.set(apiMessage);
+        this.complaintMessageType.set('error');
+        this.message.set(apiMessage);
         this.messageType.set('error');
       },
     });
@@ -683,5 +984,29 @@ export class ProfileDetailComponent implements OnInit {
       prefs.education || prefs.profession ||
       prefs.marital_status || prefs.requirements_notes?.trim()
     );
+  }
+
+  familyView(): string {
+    return familyDetailsDisplay(this.profile()?.family_details);
+  }
+
+  structuredFamily(): FamilyDetails | null {
+    const raw = this.profile()?.family_details;
+    if (!isStructuredFamilyDetails(raw) || !this.familyView()) return null;
+    return parseFamilyDetails(raw);
+  }
+
+  brotherCounts(): { total: number; married: number; unmarried: number } {
+    return familyCounts(this.structuredFamily()?.brothers || []);
+  }
+
+  sisterCounts(): { total: number; married: number; unmarried: number } {
+    return familyCounts(this.structuredFamily()?.sisters || []);
+  }
+
+  siblingLine(row: FamilySibling): string {
+    return [siblingOrderLabel(row.order), marriedLabel(row.married), row.profession.trim()]
+      .filter(Boolean)
+      .join(' · ') || 'Details not added';
   }
 }

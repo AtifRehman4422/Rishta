@@ -3,11 +3,28 @@ const { isProduction } = require('../middleware/security');
 
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_USER = (process.env.SMTP_USER || '').trim();
+const SMTP_PASS = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || 'PK Rishta <noreply@pkrishta.com>';
 
 let transporter;
+
+function looksLikeGmailAppPassword(pass) {
+  return /^[a-z]{16}$/i.test(String(pass || '').replace(/\s+/g, ''));
+}
+
+function warnIfSmtpMisconfigured() {
+  if (!SMTP_USER || !SMTP_PASS) {
+    console.warn('[mailer] SMTP_USER / SMTP_PASS missing — OTP emails will not send.');
+    return;
+  }
+  if (/gmail\.com$/i.test(SMTP_HOST) && !looksLikeGmailAppPassword(SMTP_PASS)) {
+    console.warn(
+      '[mailer] Gmail will reject a normal account password. Create an App Password ' +
+        '(Google Account → Security → 2-Step Verification → App passwords) and set SMTP_PASS in .env.'
+    );
+  }
+}
 
 function getTransporter() {
   if (transporter) return transporter;
@@ -15,7 +32,6 @@ function getTransporter() {
     return null;
   }
   transporter = nodemailer.createTransport({
-    service: 'gmail',
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_PORT === 465,
@@ -30,9 +46,8 @@ function getTransporter() {
 function smtpHelpMessage(errMessage) {
   if (/Application-specific password|Invalid login|535|534/i.test(errMessage || '')) {
     return (
-      'Gmail ne login reject kiya. Account pe 2-Step Verification on karke ' +
-      'App Password banayein, phir .env mein SMTP_PASS update karein. ' +
-      '(Google Account → Security → App passwords)'
+      'Gmail rejected the login. Turn on 2-Step Verification, create an App Password, ' +
+      'then update SMTP_PASS in .env. (Google Account → Security → App passwords)'
     );
   }
   return errMessage || 'Email send failed';
@@ -105,4 +120,4 @@ async function sendOtpEmail({ to, code, purpose }) {
   return sendMail({ to, subject: `PK Rishta — ${title}`, text, html });
 }
 
-module.exports = { sendMail, sendOtpEmail, smtpHelpMessage };
+module.exports = { sendMail, sendOtpEmail, smtpHelpMessage, warnIfSmtpMisconfigured };

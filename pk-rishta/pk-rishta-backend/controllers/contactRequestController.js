@@ -1,6 +1,6 @@
 const pool = require('../db');
 const { isProduction } = require('../middleware/security');
-const { addComplaintMessage, attachMessagesToComplaints } = require('../utils/complaintMessages');
+const { addComplaintMessage, attachMessagesToComplaints, sanitizeSupportComplaint } = require('../utils/complaintMessages');
 const {
   createNotification,
   notifyAdmins,
@@ -44,6 +44,16 @@ async function expireStalePendingRequests() {
   return expired.rows.length;
 }
 
+async function resolveRequestLimit(requesterProfileId) {
+  const result = await pool.query(
+    `SELECT contact_request_limit FROM profiles WHERE id = $1`,
+    [requesterProfileId]
+  );
+  const custom = parseInt(result.rows[0]?.contact_request_limit, 10);
+  if (Number.isFinite(custom) && custom >= 1) return Math.min(custom, 50);
+  return PENDING_REQUEST_LIMIT;
+}
+
 async function getPendingQuota(requesterProfileId) {
   await expireStalePendingRequests();
 
@@ -55,15 +65,16 @@ async function getPendingQuota(requesterProfileId) {
   );
 
   const used = result.rows[0]?.used || 0;
-  const remaining = Math.max(0, PENDING_REQUEST_LIMIT - used);
+  const limit = await resolveRequestLimit(requesterProfileId);
+  const remaining = Math.max(0, limit - used);
 
   return {
-    pending_limit: PENDING_REQUEST_LIMIT,
+    pending_limit: limit,
     pending_used: used,
     pending_remaining: remaining,
     can_request: remaining > 0,
     // Back-compat fields used by older frontend
-    daily_limit: PENDING_REQUEST_LIMIT,
+    daily_limit: limit,
     daily_used: used,
     daily_remaining: remaining,
     can_request_today: remaining > 0,
@@ -96,7 +107,7 @@ async function applyContactDecision({
 
   const request = pending.rows[0];
   const status = action === 'approve' ? 'approved' : 'rejected';
-  const expiresAtSql = action === 'approve' ? "NOW() + INTERVAL '2 days'" : 'NULL';
+  const expiresAtSql = 'NULL';
   const note = message?.trim() || null;
 
   const result = await pool.query(
@@ -120,7 +131,18 @@ async function applyContactDecision({
       userId: requesterUserId,
       type: 'contact_request_approved',
       title: 'Contact request approved',
-      body: `${targetName || 'The profile'} shared their contact number with you (visible for 2 days).`,
+      body: `${targetName || 'The profile'} shared their contact number with you. You can both see each other's numbers until someone cancels.`,
+      link: '/dashboard',
+      relatedId: requestId,
+    });
+
+    const targetUserId = await getUserIdByProfileId(request.target_profile_id);
+    const requesterName = `${request.requester_first_name || ''} ${request.requester_last_name || ''}`.trim();
+    await createNotification({
+      userId: targetUserId,
+      type: 'contact_request_approved',
+      title: 'Contact request accepted',
+      body: `You shared your contact number with ${requesterName || 'the requester'}. You can both see each other's numbers until someone cancels.`,
       link: '/dashboard',
       relatedId: requestId,
     });
@@ -182,7 +204,7 @@ async function createContactRequest(req, res) {
     const activeGrant = await pool.query(
       `SELECT id FROM contact_access_requests
        WHERE requester_profile_id = $1 AND target_profile_id = $2
-         AND status = 'approved' AND expires_at > NOW()`,
+         AND status = 'approved' AND (expires_at IS NULL OR expires_at > NOW())`,
       [requesterId, target_profile_id]
     );
     if (activeGrant.rows.length) {
@@ -193,7 +215,7 @@ async function createContactRequest(req, res) {
     if (!quota.can_request) {
       return res.status(429).json({
         success: false,
-        message: `You already have ${PENDING_REQUEST_LIMIT} pending requests. Wait for a response, or for a request to expire after 2 days.`,
+        message: `You already have ${quota.pending_limit} pending requests. Wait for a response, or for a request to expire after 2 days.`,
         data: quota,
       });
     }
@@ -271,7 +293,7 @@ async function getMyContactRequests(req, res) {
 
     const data = await Promise.all(
       result.rows.map(async (row) => {
-        if (row.status === 'approved' && row.expires_at && new Date(row.expires_at) > new Date()) {
+        if (row.status === 'approved' && (row.expires_at === null || new Date(row.expires_at) > new Date())) {
           const contacts = await pool.query(
             `SELECT id, contact_type AS type, number FROM profile_contacts
              WHERE profile_id = $1 ORDER BY sort_order, created_at`,
@@ -333,7 +355,21 @@ async function getIncomingContactRequests(req, res) {
       return res.json({ success: true, data: redacted, locked: true });
     }
 
-    res.json({ success: true, data: result.rows, locked: false });
+    const data = await Promise.all(
+      result.rows.map(async (row) => {
+        if (row.status === 'approved' && (row.expires_at === null || new Date(row.expires_at) > new Date())) {
+          const contacts = await pool.query(
+            `SELECT id, contact_type AS type, number FROM profile_contacts
+             WHERE profile_id = $1 ORDER BY sort_order, created_at`,
+            [row.requester_profile_id]
+          );
+          return { ...row, contacts: contacts.rows };
+        }
+        return row;
+      })
+    );
+
+    res.json({ success: true, data, locked: false });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -394,7 +430,7 @@ async function respondToContactRequest(req, res) {
       success: true,
       data: outcome.data,
       message: action === 'approve'
-        ? 'Contact shared with the requester for 2 days'
+        ? 'Contact shared with the requester. Both can see each other\'s numbers until someone cancels.'
         : 'Request declined',
     });
   } catch (err) {
@@ -455,7 +491,7 @@ async function getContactAccessStatus(req, res) {
     }
 
     if (request.status === 'approved') {
-      if (request.expires_at && new Date(request.expires_at) > new Date()) {
+      if (request.expires_at === null || new Date(request.expires_at) > new Date()) {
         const contacts = await pool.query(
           `SELECT id, contact_type AS type, number FROM profile_contacts
            WHERE profile_id = $1 ORDER BY sort_order, created_at`,
@@ -524,7 +560,15 @@ async function createComplaint(req, res) {
     );
 
     const complaint = result.rows[0];
-    await addComplaintMessage(complaint.id, 'reporter', req.user.id, description.trim());
+    await addComplaintMessage(complaint.id, 'reporter', req.user.id, description.trim(), 'reporter');
+
+    await notifyAdmins({
+      type: 'complaint_filed',
+      title: 'New complaint submitted',
+      body: 'A user filed a complaint. Open Admin → Complaints to review and chat with each party.',
+      link: '/admin/complaints',
+      relatedId: complaint.id,
+    });
 
     res.status(201).json({
       success: true,
@@ -540,10 +584,10 @@ async function getMyComplaints(req, res) {
   try {
     const profileId = await getRequesterProfileId(req.user.id);
     if (!profileId) {
-      return res.json({ success: true, data: { filed: [], against_me: [] } });
+      return res.json({ success: true, data: { filed: [], against_me: [], support: [] } });
     }
 
-    const [filedResult, againstResult] = await Promise.all([
+    const [filedResult, supportResult] = await Promise.all([
       pool.query(
         `SELECT c.*,
                 rp.first_name AS reported_first_name, rp.last_name AS reported_last_name,
@@ -555,27 +599,29 @@ async function getMyComplaints(req, res) {
         [profileId]
       ),
       pool.query(
-        `SELECT c.*,
-                rep.first_name AS reporter_first_name, rep.last_name AS reporter_last_name,
-                rep.city AS reporter_city,
-                rp.first_name AS reported_first_name, rp.last_name AS reported_last_name
+        `SELECT c.id, c.status, c.created_at, c.updated_at
          FROM complaints c
-         JOIN profiles rep ON rep.id = c.reporter_profile_id
-         JOIN profiles rp ON rp.id = c.reported_profile_id
          WHERE c.reported_profile_id = $1
-         ORDER BY c.created_at DESC`,
+           AND EXISTS (
+             SELECT 1 FROM complaint_messages m
+             WHERE m.complaint_id = c.id
+               AND m.sender_role = 'admin'
+               AND m.recipient_role = 'reported'
+           )
+         ORDER BY c.updated_at DESC, c.created_at DESC`,
         [profileId]
       ),
     ]);
 
     const filed = filedResult.rows.map((c) => ({ ...c, my_role: 'filed' }));
-    const against_me = againstResult.rows.map((c) => ({ ...c, my_role: 'against_me' }));
+    const supportRaw = supportResult.rows.map((c) => ({ ...c, my_role: 'support' }));
 
     res.json({
       success: true,
       data: {
-        filed: await attachMessagesToComplaints(filed),
-        against_me: await attachMessagesToComplaints(against_me),
+        filed: await attachMessagesToComplaints(filed, 'reporter'),
+        against_me: [],
+        support: (await attachMessagesToComplaints(supportRaw, 'reported')).map(sanitizeSupportComplaint),
       },
     });
   } catch (err) {
@@ -616,7 +662,30 @@ async function replyToComplaint(req, res) {
       return res.status(400).json({ success: false, message: 'This complaint is closed' });
     }
 
-    const saved = await addComplaintMessage(id, senderRole, req.user.id, message);
+    if (senderRole === 'reported') {
+      const adminContacted = await pool.query(
+        `SELECT 1 FROM complaint_messages
+         WHERE complaint_id = $1
+           AND sender_role = 'admin'
+           AND recipient_role = 'reported'
+         LIMIT 1`,
+        [id]
+      );
+      if (!adminContacted.rows.length) {
+        return res.status(403).json({ success: false, message: 'You cannot reply to this complaint' });
+      }
+    }
+
+    const saved = await addComplaintMessage(id, senderRole, req.user.id, message, senderRole);
+
+    await notifyAdmins({
+      type: 'complaint_reply',
+      title: senderRole === 'reporter' ? 'Reporter replied on a complaint' : 'User replied to admin support',
+      body: 'Open Admin → Complaints and select that user to continue the chat.',
+      link: '/admin/complaints',
+      relatedId: id,
+    });
+
     res.json({ success: true, data: saved, message: 'Reply sent' });
   } catch (err) {
     res.status(500).json({
@@ -626,11 +695,82 @@ async function replyToComplaint(req, res) {
   }
 }
 
+async function cancelContactRequest(req, res) {
+  try {
+    const { id } = req.params;
+    const myProfileId = await getRequesterProfileId(req.user.id);
+    if (!myProfileId) {
+      return res.status(400).json({ success: false, message: 'Complete your profile first' });
+    }
+
+    const requestResult = await pool.query(
+      `SELECT car.*,
+              rp.first_name AS requester_first_name, rp.last_name AS requester_last_name,
+              tp.first_name AS target_first_name, tp.last_name AS target_last_name
+       FROM contact_access_requests car
+       JOIN profiles rp ON rp.id = car.requester_profile_id
+       JOIN profiles tp ON tp.id = car.target_profile_id
+       WHERE car.id = $1 AND car.status = 'approved'`,
+      [id]
+    );
+
+    if (!requestResult.rows.length) {
+      return res.status(404).json({ success: false, message: 'Approved request not found' });
+    }
+
+    const request = requestResult.rows[0];
+    if (request.requester_profile_id !== myProfileId && request.target_profile_id !== myProfileId) {
+      return res.status(403).json({ success: false, message: 'You are not part of this connection' });
+    }
+
+    const result = await pool.query(
+      `UPDATE contact_access_requests SET
+         status = 'rejected',
+         admin_message = 'Cancelled by user',
+         response_source = 'self_cancel',
+         reviewed_by = $1,
+         reviewed_at = NOW(),
+         updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [req.user.id, id]
+    );
+
+    const otherUserId = request.requester_profile_id === myProfileId
+      ? await getUserIdByProfileId(request.target_profile_id)
+      : await getUserIdByProfileId(request.requester_profile_id);
+
+    const myName = request.requester_profile_id === myProfileId
+      ? `${request.requester_first_name || ''} ${request.requester_last_name || ''}`.trim()
+      : `${request.target_first_name || ''} ${request.target_last_name || ''}`.trim();
+
+    await createNotification({
+      userId: otherUserId,
+      type: 'contact_request_rejected',
+      title: 'Connection cancelled',
+      body: `${myName || 'The other user'} cancelled the contact connection.`,
+      link: '/dashboard',
+      relatedId: id,
+    });
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: 'Connection cancelled. Contact numbers are no longer visible.',
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: isProduction ? 'Failed to cancel connection' : err.message,
+    });
+  }
+}
+
 module.exports = {
   createContactRequest,
   getMyContactRequests,
   getIncomingContactRequests,
   respondToContactRequest,
+  cancelContactRequest,
   getContactAccessStatus,
   createComplaint,
   getMyComplaints,

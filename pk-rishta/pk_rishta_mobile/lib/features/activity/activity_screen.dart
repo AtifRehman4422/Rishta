@@ -12,12 +12,13 @@ import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/urdu_text.dart';
 import '../../data/models/contact_request_model.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../admin/admin_complaints_screen.dart';
 import '../profile/profile_detail_screen.dart';
 
 enum _MainSection { contact, complaints }
 enum _ContactView { sent, received }
 enum _RequestTab { all, pending, approved, rejected }
-enum _ComplaintTab { filed, againstMe }
+enum _ComplaintTab { filed, support }
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({
@@ -30,17 +31,18 @@ class ActivityScreen extends StatefulWidget {
   final VoidCallback onCompleteProfile;
 
   @override
-  State<ActivityScreen> createState() => _ActivityScreenState();
+  State<ActivityScreen> createState() => ActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen> {
+class ActivityScreenState extends State<ActivityScreen> {
   final _repo = ProfileRepository();
+  final _scrollController = ScrollController();
 
   List<ContactAccessRequest> _sent = [];
   List<ContactAccessRequest> _incoming = [];
   bool _incomingLocked = false;
   List<ComplaintItem> _filed = [];
-  List<ComplaintItem> _againstMe = [];
+  List<ComplaintItem> _support = [];
 
   bool _loading = false;
   String? _error;
@@ -54,6 +56,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   String? _respondingId;
   String? _declineId;
+  String? _cancellingId;
   final _declineCtrl = TextEditingController();
   final Map<String, TextEditingController> _replyCtrls = {};
 
@@ -67,11 +70,23 @@ class _ActivityScreenState extends State<ActivityScreen> {
   @override
   void dispose() {
     AuthController.instance.removeListener(_onAuthChanged);
+    _scrollController.dispose();
     _declineCtrl.dispose();
     for (final c in _replyCtrls.values) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  /// Scrolls this tab's list back to the top when its nav item is tapped.
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   void _onAuthChanged() {
@@ -83,7 +98,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         _sent = [];
         _incoming = [];
         _filed = [];
-        _againstMe = [];
+        _support = [];
         _error = null;
       });
     }
@@ -114,7 +129,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         _incoming = incoming.items;
         _incomingLocked = locked;
         _filed = complaints.filed;
-        _againstMe = complaints.againstMe;
+        _support = complaints.support;
         _loading = false;
         if (incoming.items.any((r) => r.status == 'pending')) {
           _contactView = _ContactView.received;
@@ -195,6 +210,27 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
   }
 
+  Future<void> _cancel(String id) async {
+    setState(() => _cancellingId = id);
+    try {
+      await _repo.cancelContactRequest(id);
+      if (!mounted) return;
+      setState(() {
+        _flash = 'Connection cancelled. Numbers no longer visible.';
+        _flashError = false;
+      });
+      await _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _flash = e.message;
+        _flashError = true;
+      });
+    } finally {
+      if (mounted) setState(() => _cancellingId = null);
+    }
+  }
+
   Future<void> _sendReply(String id) async {
     final text = _replyCtrl(id).text.trim();
     if (text.isEmpty) return;
@@ -258,7 +294,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           _HeaderStatChip(
                             icon: Icons.report_gmailerrorred_rounded,
                             label: 'Complaints',
-                            value: '${_filed.length + _againstMe.length}',
+                            value: '${_filed.length + _support.length}',
                           ),
                         ],
                       )
@@ -324,6 +360,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           color: AppColors.primary,
           onRefresh: _load,
           child: ListView(
+            controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
               if (_flash != null) ...[
@@ -357,16 +394,30 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _HeroCard(
-                        title: 'Complaints',
-                        subtitle:
-                            '${_filed.length + _againstMe.length} total complaints',
-                        cta: 'View complaints →',
+                        title: AuthController.instance.isAdmin
+                            ? 'Complaint Chats'
+                            : 'Complaints',
+                        subtitle: AuthController.instance.isAdmin
+                            ? 'Chat with User 1 or User 2'
+                            : '${_filed.length + _support.length} total',
+                        cta: AuthController.instance.isAdmin
+                            ? 'Open chats →'
+                            : 'View complaints →',
                         icon: Icons.warning_amber_rounded,
                         gradient: AppColors.goldGradient,
                         active: _main == _MainSection.complaints,
                         index: 1,
-                        onTap: () =>
-                            setState(() => _main = _MainSection.complaints),
+                        onTap: () {
+                          if (AuthController.instance.isAdmin) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const AdminComplaintsScreen(),
+                              ),
+                            );
+                            return;
+                          }
+                          setState(() => _main = _MainSection.complaints);
+                        },
                       ),
                     ),
                   ],
@@ -513,6 +564,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               ? e.value.contacts
                               : const [],
                           onOpen: () => _openProfile(e.value.targetProfileId),
+                          cancelAction: e.value.status == 'approved' && !e.value.isAccessExpired
+                              ? _CancelAction(
+                                  busy: _cancellingId == e.value.id,
+                                  onCancel: () => _cancel(e.value.id),
+                                )
+                              : null,
                         ),
                       ),
                     ),
@@ -584,6 +641,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             date: 'Requested ${_fmt(e.value.createdAt)}',
                             status: e.value.status,
                             note: e.value.userMessage,
+                            contacts: e.value.status == 'approved' &&
+                                    !e.value.isAccessExpired
+                                ? e.value.contacts
+                                : const [],
+                            cancelAction: !_incomingLocked &&
+                                    e.value.status == 'approved' &&
+                                    !e.value.isAccessExpired
+                                ? _CancelAction(
+                                    busy: _cancellingId == e.value.id,
+                                    onCancel: () => _cancel(e.value.id),
+                                  )
+                                : null,
                             trailing: !_incomingLocked &&
                                     e.value.status == 'pending'
                                 ? _IncomingActions(
@@ -641,18 +710,51 @@ class _ActivityScreenState extends State<ActivityScreen> {
       final label = item.status == 'expired' ? 'Expired' : 'Rejected';
       return '$label: ${item.adminMessage}';
     }
-    if (item.status == 'approved' && item.expiresAt != null) {
-      if (item.isAccessExpired) {
-        return 'Access expired on ${_fmt(item.expiresAt)}';
-      }
-      return 'Contact visible until ${_fmt(item.expiresAt)}';
+    if (item.status == 'approved' && item.isAccessExpired) {
+      return 'Access expired on ${_fmt(item.expiresAt)}';
+    }
+    if (item.status == 'approved') {
+      return 'Contact visible — both can see each other\'s numbers';
     }
     return item.adminMessage;
   }
 
   Widget _buildComplaintsSection() {
+    if (AuthController.instance.isAdmin) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            const Text(
+              'Complaints are admin-only. Chat separately with User 1 (reporter) or User 2 (reported). They cannot see each other\'s messages.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textMuted, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            PrimaryButton(
+              label: 'Open complaint chats',
+              icon: Icons.forum_outlined,
+              expanded: true,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminComplaintsScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
     final list =
-        _complaintTab == _ComplaintTab.filed ? _filed : _againstMe;
+        _complaintTab == _ComplaintTab.filed ? _filed : _support;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -683,11 +785,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _SegmentBtn(
-                  label: 'Against Me',
-                  count: _againstMe.length,
-                  active: _complaintTab == _ComplaintTab.againstMe,
+                  label: 'Admin Messages',
+                  count: _support.length,
+                  active: _complaintTab == _ComplaintTab.support,
                   onTap: () =>
-                      setState(() => _complaintTab = _ComplaintTab.againstMe),
+                      setState(() => _complaintTab = _ComplaintTab.support),
                 ),
               ),
             ],
@@ -696,21 +798,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
           if (list.isEmpty)
             _EmptyBox(
               text: _complaintTab == _ComplaintTab.filed
-                  ? 'Aap ne abhi koi complaint nahi ki.'
-                  : 'Aap ke khilaf koi complaint nahi.',
+                  ? 'You have not filed any complaints yet.'
+                  : 'No messages from PK Rishta Admin yet.',
             )
           else
             ...list.asMap().entries.map((e) {
               final c = e.value;
-              final otherLabel = _complaintTab == _ComplaintTab.filed
-                  ? 'Against'
-                  : 'Reporter';
-              final otherName = _complaintTab == _ComplaintTab.filed
-                  ? c.reportedName
-                  : c.reporterName;
-              final otherId = _complaintTab == _ComplaintTab.filed
-                  ? c.reportedProfileId
-                  : c.reporterProfileId;
+              final isSupport = _complaintTab == _ComplaintTab.support;
+              final otherLabel = isSupport ? 'From' : 'Against';
+              final otherName = isSupport
+                  ? 'PK Rishta Admin'
+                  : c.reportedName;
+              final otherId = isSupport ? null : c.reportedProfileId;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: AnimatedSection(
@@ -720,6 +819,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     otherLabel: otherLabel,
                     otherName: otherName.isEmpty ? 'Profile' : otherName,
                     date: _fmt(c.createdAt),
+                    isSupport: isSupport,
                     replyCtrl: _replyCtrl(c.id),
                     onOpenOther: otherId == null || otherId.isEmpty
                         ? null
@@ -1010,6 +1110,39 @@ class _SegmentBtn extends StatelessWidget {
   }
 }
 
+class _CancelAction extends StatelessWidget {
+  const _CancelAction({required this.busy, required this.onCancel});
+
+  final bool busy;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: busy ? null : onCancel,
+        icon: busy
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFB91C1C)),
+              )
+            : const Icon(Icons.link_off_rounded, size: 16, color: Color(0xFFB91C1C)),
+        label: Text(
+          busy ? 'Cancelling...' : 'Cancel Connection',
+          style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w600, fontSize: 13),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFB91C1C), width: 1.2),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+}
+
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
@@ -1052,6 +1185,7 @@ class _RequestCard extends StatelessWidget {
     this.note,
     this.contacts = const [],
     this.trailing,
+    this.cancelAction,
     this.onOpen,
   });
 
@@ -1062,6 +1196,7 @@ class _RequestCard extends StatelessWidget {
   final String? note;
   final List<ContactNumber> contacts;
   final Widget? trailing;
+  final _CancelAction? cancelAction;
   final VoidCallback? onOpen;
 
   Color get _accent {
@@ -1219,6 +1354,10 @@ class _RequestCard extends StatelessWidget {
                       const SizedBox(height: 10),
                       trailing!,
                     ],
+                    if (cancelAction != null) ...[
+                      const SizedBox(height: 10),
+                      cancelAction!,
+                    ],
                   ],
                 ),
               ),
@@ -1315,6 +1454,7 @@ class _ComplaintCard extends StatelessWidget {
     required this.date,
     required this.replyCtrl,
     required this.onReply,
+    this.isSupport = false,
     this.onOpenOther,
   });
 
@@ -1322,6 +1462,7 @@ class _ComplaintCard extends StatelessWidget {
   final String otherLabel;
   final String otherName;
   final String date;
+  final bool isSupport;
   final TextEditingController replyCtrl;
   final VoidCallback onReply;
   final VoidCallback? onOpenOther;
@@ -1344,7 +1485,7 @@ class _ComplaintCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  item.category.replaceAll('_', ' '),
+                  isSupport ? 'PK Rishta Support' : item.category.replaceAll('_', ' '),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -1380,38 +1521,53 @@ class _ComplaintCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ...item.messages.map(
-            (m) => Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    m.senderRole,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
+          ...item
+              .messagesFor(isSupport ? 'reported' : 'reporter')
+              .map((m) {
+            final isAdminMsg = m.senderRole == 'admin';
+            return Align(
+              alignment:
+                  isAdminMsg ? Alignment.centerLeft : Alignment.centerRight,
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isAdminMsg ? const Color(0xFFEDE9FE) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border(
+                    left: BorderSide(
+                      width: 3,
+                      color: isAdminMsg
+                          ? const Color(0xFF7C3AED)
+                          : AppColors.gold,
                     ),
                   ),
-                  Text(m.message),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m.displayRole(isSupport: isSupport),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    Text(m.message),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          }),
           if (item.status != 'dismissed') ...[
             const SizedBox(height: 6),
             TextField(
               controller: replyCtrl,
               maxLines: 2,
               decoration: const InputDecoration(
-                hintText: 'Apna jawab likhein...',
+                hintText: 'Write your reply...',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),

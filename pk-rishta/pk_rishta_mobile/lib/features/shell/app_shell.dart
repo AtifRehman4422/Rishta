@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/state/favorites_controller.dart';
 import '../../core/state/shell_navigator.dart';
 import '../../data/models/search_filters.dart';
 import '../auth/login_screen.dart';
@@ -20,10 +21,14 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  final _homeKey = GlobalKey<HomeScreenState>();
   final _searchKey = GlobalKey<SearchScreenState>();
+  final _activityKey = GlobalKey<ActivityScreenState>();
+  final _profileKey = GlobalKey<ProfileScreenState>();
 
   late final List<Widget> _screens = [
     HomeScreen(
+      key: _homeKey,
       onNavigateTab: _setTab,
       onLogin: _openLogin,
       onCompleteProfile: _openMyProfile,
@@ -34,14 +39,19 @@ class _AppShellState extends State<AppShell> {
       onLogin: _openLogin,
       onCompleteProfile: _openMyProfile,
     ),
-    ActivityScreen(onLogin: _openLogin, onCompleteProfile: _openMyProfile),
-    ProfileScreen(onLogin: _openLogin),
+    ActivityScreen(
+      key: _activityKey,
+      onLogin: _openLogin,
+      onCompleteProfile: _openMyProfile,
+    ),
+    ProfileScreen(key: _profileKey, onLogin: _openLogin),
   ];
 
   @override
   void initState() {
     super.initState();
     ShellNavigator.instance.addListener(_onShellNav);
+    FavoritesController.instance.ensureLoaded();
   }
 
   @override
@@ -57,8 +67,30 @@ class _AppShellState extends State<AppShell> {
     _setTab(tab);
   }
 
+  void _scrollTabToTop(int index) {
+    switch (index) {
+      case 0:
+        _homeKey.currentState?.scrollToTop();
+        break;
+      case 1:
+        _searchKey.currentState?.scrollToTop();
+        break;
+      case 2:
+        _activityKey.currentState?.scrollToTop();
+        break;
+      case 3:
+        _profileKey.currentState?.scrollToTop();
+        break;
+    }
+  }
+
   void _setTab(int index) {
+    _scrollTabToTop(index);
     if (_index == index) return;
+    if (_index == 1) {
+      // Leaving Search — clear filters so returning shows a fresh list.
+      _searchKey.currentState?.clearFilters();
+    }
     setState(() => _index = index);
   }
 

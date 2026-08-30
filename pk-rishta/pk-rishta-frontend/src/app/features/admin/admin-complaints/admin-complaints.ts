@@ -11,7 +11,7 @@ import { AdminService } from '../../../core/services/admin.service';
   template: `
     <div class="admin-page">
       <h1>Complaints</h1>
-      <p class="page-hint">Review user complaints — reporter aur reported dono ki profile aur email dekhein.</p>
+      <p class="page-hint">Complaints are admin-only. Chat separately with the reporter (user 1) or the reported profile (user 2). They cannot see each other's messages.</p>
 
       <div class="toolbar">
         <input
@@ -69,16 +69,41 @@ import { AdminService } from '../../../core/services/admin.service';
                 </div>
               </div>
 
+              <div class="chat-tabs">
+                <button
+                  type="button"
+                  class="chat-tab"
+                  [class.active]="chatTarget[c.id] !== 'reported'"
+                  (click)="chatTarget[c.id] = 'reporter'"
+                >
+                  Chat: User 1 (Reporter)
+                </button>
+                <button
+                  type="button"
+                  class="chat-tab"
+                  [class.active]="chatTarget[c.id] === 'reported'"
+                  (click)="chatTarget[c.id] = 'reported'"
+                >
+                  Chat: User 2 (Reported)
+                </button>
+              </div>
+
               <div class="message-thread">
-                <h4 class="thread-title">Messages</h4>
-                @for (msg of c.messages || []; track msg.id) {
+                <h4 class="thread-title">
+                  @if (chatTarget[c.id] === 'reported') {
+                    Private chat with {{ c.reported_first_name }} {{ c.reported_last_name }}
+                  } @else {
+                    Private chat with {{ c.reporter_first_name }} {{ c.reporter_last_name }}
+                  }
+                </h4>
+                @for (msg of messagesFor(c); track msg.id) {
                   <div class="message-bubble" [class]="'msg-' + msg.sender_role">
-                    <span class="msg-role">{{ roleLabel(msg.sender_role) }}</span>
+                    <span class="msg-role">{{ roleLabel(msg.sender_role, chatTarget[c.id] === 'reported' ? 'reported' : 'reporter') }}</span>
                     <p>{{ msg.message }}</p>
                     <span class="msg-time">{{ formatDate(msg.created_at) }}</span>
                   </div>
                 } @empty {
-                  <p class="no-messages">No messages yet.</p>
+                  <p class="no-messages">No messages with this user yet. Select them and send a message.</p>
                 }
               </div>
 
@@ -88,7 +113,9 @@ import { AdminService } from '../../../core/services/admin.service';
                     class="form-textarea"
                     [(ngModel)]="adminMessages[c.id]"
                     rows="2"
-                    placeholder="Message to reporter and reported user..."
+                    [placeholder]="chatTarget[c.id] === 'reported'
+                      ? 'Message to reported user only…'
+                      : 'Message to reporter only…'"
                   ></textarea>
                   <button
                     type="button"
@@ -96,7 +123,7 @@ import { AdminService } from '../../../core/services/admin.service';
                     (click)="sendMessage(c.id)"
                     [disabled]="sending() || !adminMessages[c.id]?.trim()"
                   >
-                    Send Message
+                    Send to {{ chatTarget[c.id] === 'reported' ? 'User 2' : 'User 1' }}
                   </button>
                 </div>
               }
@@ -104,7 +131,7 @@ import { AdminService } from '../../../core/services/admin.service';
               @if (c.status === 'pending') {
                 <div class="review-actions">
                   <textarea class="form-textarea" [(ngModel)]="adminNotes[c.id]" rows="2"
-                    placeholder="Resolve/dismiss notes (optional — also sent as message)"></textarea>
+                    placeholder="Internal notes only (not sent as chat)"></textarea>
                   <div class="btn-row">
                     <button class="btn btn-primary btn-sm" (click)="review(c.id, 'resolved')" [disabled]="reviewing()">
                       Mark Resolved
@@ -147,6 +174,18 @@ import { AdminService } from '../../../core/services/admin.service';
     .party-meta { color: var(--text-muted); }
     .party-email { font-size: 0.82rem; color: var(--primary); text-decoration: underline; }
     .thread-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted); }
+    .chat-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.65rem; flex-wrap: wrap; }
+    .chat-tab {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 999px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .chat-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .message-thread { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; }
     .message-bubble {
       padding: 0.65rem 0.85rem;
@@ -178,6 +217,7 @@ export class AdminComplaintsComponent implements OnInit {
   search = '';
   adminNotes: Record<string, string> = {};
   adminMessages: Record<string, string> = {};
+  chatTarget: Record<string, 'reporter' | 'reported'> = {};
   message = signal('');
   error = signal(false);
 
@@ -199,13 +239,14 @@ export class AdminComplaintsComponent implements OnInit {
   sendMessage(id: string): void {
     const text = this.adminMessages[id]?.trim();
     if (!text) return;
+    const recipient = this.chatTarget[id] === 'reported' ? 'reported' : 'reporter';
 
     this.sending.set(true);
-    this.adminService.sendComplaintMessage(id, text).subscribe({
-      next: () => {
+    this.adminService.sendComplaintMessage(id, text, recipient).subscribe({
+      next: (res) => {
         this.sending.set(false);
         this.adminMessages[id] = '';
-        this.message.set('Message sent to both parties');
+        this.message.set(res.message || 'Message sent');
         this.error.set(false);
         this.load();
       },
@@ -234,10 +275,23 @@ export class AdminComplaintsComponent implements OnInit {
     });
   }
 
-  roleLabel(role: string): string {
+  messagesFor(complaint: Complaint) {
+    const party = this.chatTarget[complaint.id] === 'reported' ? 'reported' : 'reporter';
+    return (complaint.messages || []).filter((msg) => {
+      if (msg.sender_role === party) return true;
+      if (msg.sender_role === 'admin') {
+        const target = msg.recipient_role || 'reporter';
+        return target === party || target === 'both';
+      }
+      return false;
+    });
+  }
+
+  roleLabel(role: string, party: 'reporter' | 'reported' = 'reporter'): string {
     if (role === 'admin') return 'Admin';
-    if (role === 'reporter') return 'Reporter';
-    if (role === 'reported') return 'Reported User';
+    if (role === party) return party === 'reporter' ? 'User 1 (Reporter)' : 'User 2 (Reported)';
+    if (role === 'reporter') return 'User 1 (Reporter)';
+    if (role === 'reported') return 'User 2 (Reported)';
     return role;
   }
 

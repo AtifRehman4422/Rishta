@@ -5,13 +5,6 @@ import { Router, RouterLink } from '@angular/router';
 import { FormErrorState } from '../../../core/utils/form-error-state';
 import { validateRegisterForm } from '../../../core/utils/validation';
 import { AuthService } from '../../../core/services/auth.service';
-import {
-  ALL_LOCATION_PROVINCES,
-  OVERSEAS_COUNTRIES,
-  citiesForProvince,
-  isOverseasProvince,
-  provinceLabel,
-} from '../../../core/constants/pakistan-locations';
 import { AuthShellComponent } from '../../../shared/components/auth-shell/auth-shell';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error';
 
@@ -35,8 +28,8 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
       @if (otpStep()) {
         <form class="auth-form" (ngSubmit)="onVerifyOtp()" novalidate>
           <p class="otp-hint">
-            OTP bhej diya gaya hai <strong>{{ pendingEmail }}</strong> par.
-            4 minute baad Resend active hoga.
+            An OTP has been sent to <strong>{{ pendingEmail }}</strong>.
+            Resend becomes available after 4 minutes.
           </p>
           <div class="form-group">
             <label class="form-label">Enter 6-digit OTP *</label>
@@ -51,7 +44,7 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
             />
           </div>
           <button
-            class="btn btn-primary auth-submit"
+            class="btn btn-primary auth-submit animate-fade-in-up"
             type="submit"
             [disabled]="loading()"
             [class.is-loading]="loading()"
@@ -60,7 +53,7 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
               <span class="btn-spinner"></span>
               Verifying...
             } @else {
-              Verify & Continue →
+              Verify OTP
             }
           </button>
           <div class="otp-actions">
@@ -104,7 +97,7 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
               [class.input-invalid]="formErrors.show('full_name')"
               [(ngModel)]="form.full_name"
               name="full_name"
-              placeholder="e.g. Ahmed Khan"
+              placeholder="Enter full name"
               (blur)="formErrors.touch('full_name')"
               (ngModelChange)="onFieldChange('full_name')"
             />
@@ -192,71 +185,6 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
                 </button>
               </div>
               <app-field-error [message]="formErrors.message('password')" />
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section animate-fade-in-up delay-4">
-          <h3 class="section-label"><span>📍</span> Location</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Location *</label>
-              <input
-                class="form-input auth-input"
-                [class.input-invalid]="formErrors.show('province')"
-                list="reg-province-suggestions"
-                [(ngModel)]="form.province"
-                name="province"
-                placeholder="Select or type (e.g. Punjab, Overseas)"
-                (ngModelChange)="onProvinceChange($event)"
-              />
-              <datalist id="reg-province-suggestions">
-                @for (p of provinces; track p) {
-                  <option [value]="p">{{ provinceLabel(p) }}</option>
-                }
-              </datalist>
-              <app-field-error [message]="formErrors.message('province')" />
-            </div>
-            @if (isOverseasLocation) {
-              <div class="form-group">
-                <label class="form-label">Country *</label>
-                <input
-                  class="form-input auth-input"
-                  [class.input-invalid]="formErrors.show('country')"
-                  list="reg-country-suggestions"
-                  [(ngModel)]="form.country"
-                  name="country"
-                  placeholder="Select or type country"
-                  (ngModelChange)="onFieldChange('country')"
-                />
-                <datalist id="reg-country-suggestions">
-                  @for (c of overseasCountries; track c) {
-                    <option [value]="c"></option>
-                  }
-                </datalist>
-                <app-field-error [message]="formErrors.message('country')" />
-              </div>
-            }
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">City *</label>
-              <input
-                class="form-input auth-input"
-                [class.input-invalid]="formErrors.show('city')"
-                list="reg-city-suggestions"
-                [(ngModel)]="form.city"
-                name="city"
-                placeholder="Type city (e.g. Islamabad, Dubai)"
-                (blur)="formErrors.touch('city')"
-                (ngModelChange)="onFieldChange('city')"
-              />
-              <datalist id="reg-city-suggestions">
-                @for (c of availableCities; track c) {
-                  <option [value]="c"></option>
-                }
-              </datalist>
-              <app-field-error [message]="formErrors.message('city')" />
             </div>
           </div>
         </div>
@@ -421,11 +349,10 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
 
     .auth-submit {
       width: 100%;
+      margin-top: 0.35rem;
       padding: 0.95rem 1.5rem;
       font-size: 0.95rem;
       border-radius: 50px;
-      opacity: 0;
-      animation-fill-mode: forwards;
     }
     .auth-submit.is-loading { opacity: 0.85; cursor: wait; }
 
@@ -514,11 +441,8 @@ export class RegisterComponent {
 
   form = {
     email: '', password: '', phone: '', full_name: '',
-    gender: '', date_of_birth: '', city: '', province: '', country: '',
+    gender: '', date_of_birth: '',
   };
-  provinces = [...ALL_LOCATION_PROVINCES];
-  overseasCountries = [...OVERSEAS_COUNTRIES];
-  readonly provinceLabel = provinceLabel;
   readonly maxDob = this.calcMaxDob();
   loading = signal(false);
   error = signal('');
@@ -534,18 +458,9 @@ export class RegisterComponent {
   readonly steps = [
     { label: 'Personal' },
     { label: 'Account' },
-    { label: 'Location' },
   ];
 
   currentStep = signal(1);
-
-  get isOverseasLocation(): boolean {
-    return isOverseasProvince(this.form.province);
-  }
-
-  get availableCities(): string[] {
-    return citiesForProvince(this.form.province);
-  }
 
   resendLabel(): string {
     const s = this.resendSeconds();
@@ -565,27 +480,13 @@ export class RegisterComponent {
     this.updateStep();
   }
 
-  onProvinceChange(province: string): void {
-    if (isOverseasProvince(province)) {
-      this.form.country = '';
-    } else {
-      this.form.country = 'Pakistan';
-    }
-    this.onFieldChange('province');
-    this.formErrors.clear('city');
-    this.formErrors.clear('country');
-  }
-
   updateStep(): void {
     let step = 1;
     if (this.form.full_name && this.form.gender && this.form.date_of_birth) {
       step = 2;
     }
     if (this.form.email && this.form.phone && this.form.password?.length >= 8) {
-      step = 3;
-    }
-    if (this.form.province && this.form.city) {
-      step = 3;
+      step = 2;
     }
     this.currentStep.set(step);
   }
@@ -624,7 +525,6 @@ export class RegisterComponent {
 
     this.auth.register({
       ...this.form,
-      country: isOverseasProvince(this.form.province) ? this.form.country : 'Pakistan',
     }).subscribe({
       next: (res) => {
         this.loading.set(false);

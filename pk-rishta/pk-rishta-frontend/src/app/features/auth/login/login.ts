@@ -12,7 +12,7 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
   selector: 'app-login',
   imports: [FormsModule, RouterLink, AuthShellComponent, FieldErrorComponent],
   template: `
-    <app-auth-shell title="Welcome Back" urduTitle="خوش آمدید" subtitle="Sign in to continue your rishta journey">
+    <app-auth-shell title="Welcome Back" urduTitle="خوش آمدید" subtitle="Sign in to continue your journey">
       @if (error()) {
         <div class="alert alert-error alert-shake">{{ error() }}</div>
       }
@@ -35,8 +35,8 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
               placeholder="••••••"
             />
           </div>
-          <button class="btn btn-primary auth-submit" type="submit" [disabled]="loading()">
-            {{ loading() ? 'Verifying…' : 'Verify & Login' }}
+          <button class="btn btn-primary auth-submit animate-fade-in-up" type="submit" [disabled]="loading()">
+            {{ loading() ? 'Verifying…' : 'Verify OTP' }}
           </button>
           <div class="otp-actions">
             <button type="button" class="btn btn-ghost btn-sm" [disabled]="resendSeconds() > 0 || loading()" (click)="onResendOtp()">
@@ -118,17 +118,6 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
         Don't have an account?
         <a routerLink="/register" class="auth-link">Register Free</a>
       </p>
-
-      <div class="demo-credentials animate-fade-in-up delay-5">
-        <p><strong>Demo Admin:</strong> atif-admin442@pkrishta.com / ARadmin@442</p>
-        <p><strong>Demo User (Ahmed):</strong> ahmed.khan@example.com / User@123</p>
-        <p><strong>Demo User (Zainab):</strong> zainab.hussain@example.com / User@123</p>
-        <div class="demo-actions">
-          <button type="button" class="demo-fill-btn" (click)="fillDemo('admin')">Use Admin</button>
-          <button type="button" class="demo-fill-btn" (click)="fillDemo('ahmed')">Use Ahmed</button>
-          <button type="button" class="demo-fill-btn" (click)="fillDemo('zainab')">Use Zainab</button>
-        </div>
-      </div>
     </app-auth-shell>
   `,
   styles: [`
@@ -180,8 +169,6 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
       padding: 0.95rem 1.5rem;
       font-size: 1rem;
       border-radius: 50px;
-      opacity: 0;
-      animation-fill-mode: forwards;
     }
     .auth-submit.is-loading { opacity: 0.85; cursor: wait; }
 
@@ -228,42 +215,6 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
       0%, 100% { transform: translateX(0); }
       20%, 60% { transform: translateX(-6px); }
       40%, 80% { transform: translateX(6px); }
-    }
-
-    .demo-credentials {
-      margin-top: 1.5rem;
-      padding: 1rem 1.1rem;
-      background: rgba(255, 255, 255, 0.75);
-      border: 1px dashed var(--border);
-      border-radius: 14px;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      opacity: 0;
-      animation-fill-mode: forwards;
-    }
-    .demo-credentials p { margin-bottom: 0.35rem; line-height: 1.5; }
-    .demo-credentials strong { color: var(--primary); }
-    .demo-actions {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-      flex-wrap: wrap;
-    }
-    .demo-fill-btn {
-      padding: 0.4rem 0.85rem;
-      border-radius: 50px;
-      border: 1px solid var(--border);
-      background: white;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--primary);
-      cursor: pointer;
-      font-family: var(--font);
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .demo-fill-btn:hover {
-      border-color: var(--primary);
-      background: rgba(155, 27, 48, 0.05);
     }
 
     .pw-row {
@@ -336,20 +287,6 @@ export class LoginComponent {
         this.resendSeconds.set(next);
       }
     }, 1000);
-  }
-
-  fillDemo(type: 'admin' | 'ahmed' | 'zainab'): void {
-    this.formErrors.reset();
-    if (type === 'admin') {
-      this.email = 'atif-admin442@pkrishta.com';
-      this.password = 'ARadmin@442';
-    } else if (type === 'ahmed') {
-      this.email = 'ahmed.khan@example.com';
-      this.password = 'User@123';
-    } else {
-      this.email = 'zainab.hussain@example.com';
-      this.password = 'User@123';
-    }
   }
 
   onSubmit(): void {

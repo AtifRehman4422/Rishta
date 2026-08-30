@@ -76,11 +76,65 @@ class SearchFilters {
     return chips;
   }
 
+  /// Chip label + the field it clears, so each chip can have its own X button.
+  List<(String, String)> get chipFields {
+    final chips = <(String, String)>[];
+    if (gender.isNotEmpty) {
+      chips.add((gender == 'male' ? 'Male' : 'Female', 'gender'));
+    }
+    if (province.isNotEmpty) chips.add((provinceLabel(province), 'province'));
+    if (country.isNotEmpty) chips.add((country, 'country'));
+    if (city.isNotEmpty) chips.add((city, 'city'));
+    if (minAge.isNotEmpty || maxAge.isNotEmpty) {
+      chips.add((
+        '${minAge.isEmpty ? '18' : minAge}-${maxAge.isEmpty ? '∞' : maxAge} yrs',
+        'age',
+      ));
+    }
+    if (maritalStatus.isNotEmpty) {
+      chips.add((maritalStatusLabels[maritalStatus] ?? maritalStatus, 'maritalStatus'));
+    }
+    if (religion.isNotEmpty) chips.add((religion, 'religion'));
+    if (education.isNotEmpty) chips.add((education, 'education'));
+    return chips;
+  }
+
+  /// Clears a single filter field by the id used in [chipFields].
+  void clearField(String field) {
+    switch (field) {
+      case 'gender':
+        gender = '';
+        break;
+      case 'province':
+        province = '';
+        break;
+      case 'country':
+        country = '';
+        break;
+      case 'city':
+        city = '';
+        break;
+      case 'age':
+        minAge = '';
+        maxAge = '';
+        break;
+      case 'maritalStatus':
+        maritalStatus = '';
+        break;
+      case 'religion':
+        religion = '';
+        break;
+      case 'education':
+        education = '';
+        break;
+    }
+  }
+
   Map<String, dynamic> toQuery({int page = 1, int limit = 30}) => {
         'gender': gender.isEmpty ? null : gender,
         'city': city.isEmpty ? null : city,
         'province': province.isEmpty ? null : province,
-        'country': country.isEmpty ? null : country,
+        'country': (country.isEmpty || country.toLowerCase() == 'pakistan') ? null : country,
         'marital_status': maritalStatus.isEmpty ? null : maritalStatus,
         'religion': religion.isEmpty ? null : religion,
         'education': education.isEmpty ? null : education,
@@ -188,6 +242,7 @@ const educationOptions = [
   'Higher Secondary / Intermediate / College',
   'Certificate Course',
   'Diploma',
+  'Hafiz-e-Quran',
   'Associate Degree',
   "Bachelor's Degree",
   'Postgraduate Diploma',

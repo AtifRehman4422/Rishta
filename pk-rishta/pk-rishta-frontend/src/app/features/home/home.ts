@@ -37,7 +37,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
         <div class="hero-text animate-fade-in-up">
           <div class="hero-badge">
             <span class="badge-dot"></span>
-            Pakistan's Trusted Rishta Platform
+            Pakistan's Trusted Matchmaking Platform
           </div>
           <h1>
             Your <span class="highlight">Blessed</span> Journey<br>
@@ -45,16 +45,16 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
           </h1>
           <p class="hero-urdu text-urdu">اللہ کے نام سے — اپنا رشتہ تلاش کریں</p>
           <p class="hero-desc">
-            Halal rishtay, verified families, aur puri Pakistan se hazaron profiles.
-            Shadi ka safar yahan se shuru hota hai.
+            Halal matches, verified families, and thousands of profiles from across Pakistan.
+            Your marriage journey starts here.
           </p>
 
           @if (!auth.isLoggedIn() || auth.isAdmin() || auth.currentUser()?.is_profile_complete) {
             <div class="hero-search card glass-card">
-              <p class="search-label">🔍 Apna Ideal Rishta Dhundhein</p>
+              <p class="search-label">🔍 Find your ideal match</p>
               <div class="search-row">
                 <select class="form-select" [(ngModel)]="searchGender">
-                  <option value="">Gender</option>
+                  <option value="">Any</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                 </select>
@@ -63,14 +63,14 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                   [(ngModel)]="searchProvince"
                   (ngModelChange)="onProvinceChange($event)"
                 >
-                  <option value="">Province / Location</option>
+                  <option value="">Any</option>
                   @for (p of provinces; track p) {
                     <option [value]="p">{{ provinceLabel(p) }}</option>
                   }
                 </select>
                 @if (isOverseasProvince(searchProvince)) {
                   <select class="form-select" [(ngModel)]="searchCity">
-                    <option value="">Country</option>
+                    <option value="">Any</option>
                     @for (c of overseasCountries; track c) {
                       <option [value]="c">{{ c }}</option>
                     }
@@ -81,14 +81,14 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                     [(ngModel)]="searchCity"
                     [disabled]="!searchProvince"
                   >
-                    <option value="">{{ searchProvince ? 'City' : 'Select province first' }}</option>
+                    <option value="">Any</option>
                     @for (c of cityOptions; track c) {
                       <option [value]="c">{{ c }}</option>
                     }
                   </select>
                 }
                 <a [routerLink]="['/search']" [queryParams]="{ gender: searchGender, city: searchCity, province: searchProvince }" class="btn btn-primary">
-                  Search Rishta
+                  Search Matches
                 </a>
               </div>
             </div>
@@ -101,7 +101,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                 </div>
                 <div>
                   <span class="hero-gate-status">Almost there — 4 easy steps</span>
-                  <h2>Start your rishta journey</h2>
+                  <h2>Start your match journey</h2>
                   <p>Complete your profile — then matching profiles will unlock.</p>
                 </div>
               </div>
@@ -193,28 +193,29 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       <div class="container">
         <div class="section-ornament">💍 ✦ 💍</div>
         <h2 class="section-title text-center">Recent Profiles</h2>
-        <p class="section-subtitle text-center">Verified rishtay — Pakistan aur overseas se</p>
-        @if (loading()) {
+        <p class="section-subtitle text-center">Verified matches from Pakistan and overseas</p>
+        @if (!canViewProfiles) {
+          <div class="recent-results">
+            <div class="recent-access-overlay card">
+              <span class="recent-lock-icon">🔒</span>
+              @if (!auth.isLoggedIn()) {
+                <h3>Login to view profiles</h3>
+                <p>Profiles are only visible to registered members with a complete profile.</p>
+                <div class="recent-access-actions">
+                  <a routerLink="/login" class="btn btn-primary">Login</a>
+                  <a routerLink="/register" class="btn btn-outline">Register Free</a>
+                </div>
+              } @else {
+                <h3>Complete your profile first</h3>
+                <p>Fill all required fields to unlock profiles and matching.</p>
+                <a routerLink="/my-profile" class="btn btn-primary">Complete Your Profile</a>
+              }
+            </div>
+          </div>
+        } @else if (loading()) {
           <div class="loading-center"><div class="spinner"></div></div>
         } @else if (recentProfiles().length) {
-          <div class="recent-results" [class.recent-results-locked]="!canViewProfiles">
-            @if (!canViewProfiles) {
-              <div class="recent-access-overlay card">
-                <span class="recent-lock-icon">🔒</span>
-                @if (!auth.isLoggedIn()) {
-                  <h3>Login to view profiles</h3>
-                  <p>Profiles are blurred for privacy. Login or register to continue.</p>
-                  <div class="recent-access-actions">
-                    <a routerLink="/login" class="btn btn-primary">Login</a>
-                    <a routerLink="/register" class="btn btn-outline">Register Free</a>
-                  </div>
-                } @else {
-                  <h3>Complete your profile first</h3>
-                  <p>Fill all required fields to unlock profiles and matching.</p>
-                  <a routerLink="/my-profile" class="btn btn-primary">Complete Your Profile</a>
-                }
-              </div>
-            }
+          <div class="recent-results">
             <div class="grid-3 recent-profile-grid">
               @for (profile of recentProfiles(); track profile.id; let i = $index) {
                 <app-profile-card [profile]="profile" [delay]="(i * 0.1) + 's'" />
@@ -222,19 +223,13 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
             </div>
           </div>
           <div class="text-center profiles-cta">
-            @if (canViewProfiles) {
-              <a routerLink="/search" class="btn btn-primary btn-lg">View All Profiles →</a>
-            } @else if (!auth.isLoggedIn()) {
-              <a routerLink="/login" class="btn btn-primary btn-lg">Login to View Profiles →</a>
-            } @else {
-              <a routerLink="/my-profile" class="btn btn-primary btn-lg">Complete Your Profile →</a>
-            }
+            <a routerLink="/search" class="btn btn-primary btn-lg">View All Profiles →</a>
           </div>
           <div class="home-ad">
             <app-ad-slot [slot]="adSlots.homeBelowProfiles" format="horizontal" />
           </div>
         } @else {
-          <p class="text-center profiles-empty">Abhi koi profile available nahi — pehle register karein.</p>
+          <p class="text-center profiles-empty">No profiles available yet — please register first.</p>
         }
       </div>
     </section>
@@ -243,8 +238,8 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
     <section class="how-section page-section">
       <div class="container">
         <div class="section-ornament">❋ ✦ ❋</div>
-        <h2 class="section-title text-center">Rishta Kaise Milta Hai?</h2>
-        <p class="section-subtitle text-center">Sirf 4 aasaan qadam — shadi tak ka safar</p>
+        <h2 class="section-title text-center">How Does Matching Work?</h2>
+        <p class="section-subtitle text-center">Just 4 easy steps — from profile to marriage</p>
 
         <div class="steps-timeline">
           <div class="steps-track" aria-hidden="true"></div>
@@ -269,8 +264,8 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
     <section class="testimonials-section page-section bg-testimonials">
       <div class="container">
         <div class="section-ornament">✦ 💑 ✦</div>
-        <h2 class="section-title text-center" style="color: white">Khushgawar Rishtay</h2>
-        <p class="section-subtitle text-center" style="color: rgba(255,255,255,0.8)">Jo log PK Rishta se apna safar shuru kiye</p>
+        <h2 class="section-title text-center" style="color: white">Happy Matches</h2>
+        <p class="section-subtitle text-center" style="color: rgba(255,255,255,0.8)">Couples who started their journey with PK Rishta</p>
         <div class="testimonial-grid">
           @for (t of testimonials; track t.name; let i = $index) {
             <div class="testimonial-card card animate-fade-in-up" [style.animation-delay]="(i * 0.12) + 's'">
@@ -294,11 +289,11 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       <app-floating-hearts [light]="true" />
       <div class="container text-center cta-inner">
         <span class="cta-ring animate-float">💍</span>
-        <h2 class="animate-fade-in-up">Apna Rishta Aaj Hi Register Karein</h2>
+        <h2 class="animate-fade-in-up">Register your profile today</h2>
         <p class="text-urdu cta-urdu">آج ہی اپنا رشتہ رجسٹر کریں — مکمل مفت</p>
-        <p>Hazaron Pakistani families ne yahan apna perfect match dhunda. Ab aapki baari hai!</p>
+        <p>Thousands of Pakistani families have found their match here. Now it's your turn.</p>
         <div class="cta-buttons">
-          <a routerLink="/register" class="btn btn-secondary btn-lg">💍 Free Profile Banayein</a>
+          <a routerLink="/register" class="btn btn-secondary btn-lg">💍 Create a free profile</a>
           <a routerLink="/search" class="btn btn-outline btn-lg cta-outline">View Profiles</a>
         </div>
       </div>
@@ -542,19 +537,11 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
     /* Recent profiles */
     .profiles-section { position: relative; background: var(--blush); }
     .profiles-cta { margin-top: 2.5rem; }
-    .recent-results { position: relative; min-height: 320px; }
-    .recent-results-locked .recent-profile-grid {
-      filter: blur(9px);
-      opacity: 0.62;
-      pointer-events: none;
-      user-select: none;
-    }
+    .recent-results { position: relative; min-height: 0; }
     .recent-access-overlay {
-      position: absolute;
+      position: relative;
       z-index: 5;
-      top: 3rem;
-      left: 50%;
-      transform: translateX(-50%);
+      margin: 0 auto;
       width: min(440px, calc(100% - 2rem));
       padding: 1.75rem;
       text-align: center;
@@ -798,30 +785,36 @@ export class HomeComponent implements OnInit {
   trustBadges = ['✓ 100% Halal', '🔒 Privacy Protected', '✅ Verified Profiles', '🆓 Free Registration'];
 
   whyUs = [
-    { icon: '🕌', title: 'Islamic Values', desc: 'Har rishta halal tareeqay se — deen aur family values pe focus' },
-    { icon: '🔒', title: 'Privacy First', desc: 'Aapki photos aur details sirf registered members ko dikhti hain' },
-    { icon: '✅', title: 'Verified Families', desc: 'Admin team har profile ko verify karti hai — fake accounts nahi' },
-    { icon: '🏙️', title: 'All Pakistan', desc: 'Karachi se Gilgit tak — har shehar aur province se rishtay' },
-    { icon: '👨‍👩‍👧', title: 'Family Friendly', desc: 'Waldain bhi profile dekh sakte hain — pura khandan shamil ho' },
-    { icon: '💍', title: 'Serious Intentions', desc: 'Sirf shadi ke liye — casual dating bilkul nahi' },
+    { icon: '🕌', title: 'Islamic Values', desc: 'Every match follows a halal process — faith and family values come first' },
+    { icon: '🔒', title: 'Privacy First', desc: 'Your photos and details are visible only to registered members' },
+    { icon: '✅', title: 'Verified Families', desc: 'Our admin team verifies every profile — no fake accounts' },
+    { icon: '🏙️', title: 'All Pakistan', desc: 'From Karachi to Gilgit — matches from every city and province' },
+    { icon: '👨‍👩‍👧', title: 'Family Friendly', desc: 'Parents can view profiles too — the whole family is included' },
+    { icon: '💍', title: 'Serious Intentions', desc: 'For marriage only — no casual dating' },
   ];
 
   steps = [
-    { icon: '📝', title: 'Profile Banayein', urdu: 'پروفائل بنائیں', desc: 'Free register karein aur apni details bharein' },
-    { icon: '🔍', title: 'Rishta Dhundhein', urdu: 'رشتہ تلاش کریں', desc: 'City, education, profession se filter karein' },
-    { icon: '💌', title: 'Interest Bhejein', urdu: 'دلچسپی بھیجیں', desc: 'Pasand ki profile par interest bhejein' },
-    { icon: '💍', title: 'Nikah Tak', urdu: 'نکاح تک', desc: 'Family se rabta karein aur apna safar shuru karein' },
+    { icon: '📝', title: 'Create Profile', urdu: 'پروفائل بنائیں', desc: 'Register for free and fill in your details' },
+    { icon: '🔍', title: 'Find a Match', urdu: 'رشتہ تلاش کریں', desc: 'Filter by city, education, and profession' },
+    { icon: '💌', title: 'Send Request', urdu: 'درخواست بھیجیں', desc: 'Send a contact request on a profile you like' },
+    { icon: '💍', title: 'Until Nikah', urdu: 'نکاح تک', desc: 'Connect with the family and begin your journey' },
   ];
 
   testimonials = [
-    { name: 'Sara & Ali', city: 'Lahore', year: '2025', text: 'PK Rishta se humara rishta mila. Platform bohat professional hai aur families ko respect deta hai. Shukriya!' },
-    { name: 'Hina Malik', city: 'Karachi', year: '2025', text: 'Meri beti ka perfect match yahan mila. Verified profiles aur achi privacy — dil se recommend karti hoon.' },
-    { name: 'Usman Sheikh', city: 'Islamabad', year: '2024', text: 'Maine 2 mahine mein apna rishta dhund liya. Filters bohat helpful hain aur process bohat aasaan tha.' },
+    { name: 'Sara & Ali', city: 'Lahore', year: '2025', text: 'We found our match on PK Rishta. The platform is very professional and treats families with respect. Thank you!' },
+    { name: 'Hina Malik', city: 'Karachi', year: '2025', text: 'My daughter found her perfect match here. Verified profiles and strong privacy — I recommend it from the heart.' },
+    { name: 'Usman Sheikh', city: 'Islamabad', year: '2024', text: 'I found my match in 2 months. The filters are very helpful and the process was easy.' },
   ];
 
   ngOnInit(): void {
-    if (this.auth.isLoggedIn() && !this.auth.isAdmin()) {
-      this.auth.getMe().subscribe();
+    this.loadRecentIfAllowed();
+  }
+
+  private loadRecentIfAllowed(): void {
+    if (!this.canViewProfiles) {
+      this.recentProfiles.set([]);
+      this.loading.set(false);
+      return;
     }
     this.profileService.search({ page: 1, limit: 6 }).subscribe({
       next: (res) => { this.recentProfiles.set(res.data); this.loading.set(false); },

@@ -2,6 +2,7 @@ export const PROFESSION_CATEGORIES = [
   'Government Job',
   'Private Job',
   'Business / Self-Employed',
+  'Not Working',
 ] as const;
 
 export type ProfessionCategory = (typeof PROFESSION_CATEGORIES)[number];
@@ -76,10 +77,19 @@ export const BUSINESS_PROFESSIONS = [
   PROFESSION_OTHER,
 ] as const;
 
+export const NOT_WORKING_PROFESSIONS = [
+  'No Job',
+  'Student',
+  'Housewife',
+  'Retired',
+  PROFESSION_OTHER,
+] as const;
+
 const CATEGORY_OPTIONS: Record<ProfessionCategory, readonly string[]> = {
   'Government Job': GOVERNMENT_PROFESSIONS,
   'Private Job': PRIVATE_PROFESSIONS,
   'Business / Self-Employed': BUSINESS_PROFESSIONS,
+  'Not Working': NOT_WORKING_PROFESSIONS,
 };
 
 export function professionsForCategory(category?: string | null): string[] {
@@ -92,6 +102,7 @@ export function allProfessionOptions(): string[] {
     ...GOVERNMENT_PROFESSIONS,
     ...PRIVATE_PROFESSIONS,
     ...BUSINESS_PROFESSIONS,
+    ...NOT_WORKING_PROFESSIONS,
   ];
 }
 

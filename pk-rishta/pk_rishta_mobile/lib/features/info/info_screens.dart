@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/validation.dart';
+import '../../core/widgets/fade_slide.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/urdu_text.dart';
 import '../../data/content/blog_posts.dart';
@@ -334,114 +337,196 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         children: [
           _ContactInfoTile(
-            icon: '📧',
+            icon: Icons.mail_rounded,
+            iconGradient: AppColors.weddingGradient,
             title: 'Email',
             value: 'info@pkrishta.com',
+            hint: 'We reply within 24 hours',
             onTap: () => _launch('mailto:info@pkrishta.com'),
+            delay: Duration.zero,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _ContactInfoTile(
-            icon: '💬',
+            icon: Icons.chat_rounded,
+            iconGradient: AppColors.goldGradient,
             title: 'WhatsApp',
             value: 'Chat with support',
+            hint: '+92 300 1234567',
             onTap: () => _launch('https://wa.me/923001234567'),
+            delay: 90.ms,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _ContactInfoTile(
-            icon: '🌐',
+            icon: Icons.language_rounded,
+            iconGradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.primaryLight, AppColors.gold],
+            ),
             title: 'Website',
             value: 'pkrishta.com',
+            hint: 'Visit our website',
             onTap: () => _launch('https://pkrishta.com'),
+            delay: 180.ms,
           ),
-          const SizedBox(height: 18),
-          _Card(
-            child: _sent
-                ? Column(
-                    children: [
-                      const Text('✓', style: TextStyle(fontSize: 40, color: Color(0xFF15803D))),
-                      const SizedBox(height: 8),
-                      Text('Message Sent!', style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'شکریہ! We received your message and will respond within 24 hours.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textMuted, height: 1.5),
-                      ),
-                      const SizedBox(height: 14),
-                      PrimaryButton(
-                        label: 'Send Another',
-                        style: PrimaryButtonStyle.outline,
-                        onPressed: () => setState(() {
-                          _sent = false;
-                          _message.clear();
-                        }),
-                      ),
-                    ],
-                  )
-                : Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Send Us a Message', style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 6),
-                        const Text('Our team usually replies within 24 hours.', style: TextStyle(color: AppColors.textMuted)),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C))),
-                        ],
-                        const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _name,
-                          decoration: const InputDecoration(labelText: 'Your Name'),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(labelText: 'Email'),
-                          validator: (v) => v == null || !v.contains('@') ? 'Enter valid email' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _phone,
-                          keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(labelText: 'Phone (optional)'),
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          initialValue: _subject,
-                          decoration: const InputDecoration(labelText: 'Subject'),
-                          items: const [
-                            DropdownMenuItem(value: 'general', child: Text('General Inquiry')),
-                            DropdownMenuItem(value: 'registration', child: Text('Registration Help')),
-                            DropdownMenuItem(value: 'contact-request', child: Text('Contact Request')),
-                            DropdownMenuItem(value: 'complaint', child: Text('Complaint')),
-                            DropdownMenuItem(value: 'partnership', child: Text('Partnership')),
-                          ],
-                          onChanged: (v) => setState(() => _subject = v ?? _subject),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _message,
-                          maxLines: 5,
-                          decoration: const InputDecoration(labelText: 'Message', alignLabelWithHint: true),
-                          validator: (v) => v == null || v.trim().length < 10 ? 'Write at least 10 characters' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _submitting
-                            ? const Center(child: CircularProgressIndicator())
-                            : PrimaryButton(
-                                label: 'Send Message',
-                                icon: Icons.send_rounded,
-                                expanded: true,
-                                onPressed: _submit,
-                              ),
-                      ],
+          const SizedBox(height: 22),
+          AnimatedSection(
+            index: 0,
+            child: _Card(
+              child: _sent ? _buildSentView(context) : _buildForm(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSentView(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 88,
+          height: 88,
+          decoration: BoxDecoration(
+            color: const Color(0xFF15803D).withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF15803D), width: 2),
+          ),
+          child: const Icon(
+            Icons.check_rounded,
+            color: Color(0xFF15803D),
+            size: 46,
+          ),
+        ).animate().scale(
+          begin: const Offset(0.4, 0.4),
+          end: const Offset(1, 1),
+          duration: 550.ms,
+          curve: Curves.elasticOut,
+        ),
+        const SizedBox(height: 16),
+        Text('Message Sent!', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 6),
+        const Text(
+          'شکریہ! We received your message and will respond within 24 hours.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.textMuted, height: 1.5),
+        ),
+        const SizedBox(height: 16),
+        PrimaryButton(
+          label: 'Send Another',
+          icon: Icons.edit_outlined,
+          style: PrimaryButtonStyle.outline,
+          onPressed: () => setState(() {
+            _sent = false;
+            _message.clear();
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildForm(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Send Us a Message', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 6),
+          const Text(
+            'Our team usually replies within 24 hours.',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFB91C1C).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFB91C1C).withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: Color(0xFFB91C1C), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Color(0xFFB91C1C)),
                     ),
                   ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _name,
+            decoration: const InputDecoration(
+              labelText: 'Your Name',
+              prefixIcon: Icon(Icons.person_outline_rounded, color: AppColors.primary),
+            ),
+            validator: (v) => validateName(v, 'Name'),
           ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              prefixIcon: Icon(Icons.mail_outline_rounded, color: AppColors.primary),
+            ),
+            validator: (v) => validateEmail(v),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _phone,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Phone (optional)',
+              prefixIcon: Icon(Icons.phone_outlined, color: AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _subject,
+            decoration: const InputDecoration(
+              labelText: 'Subject',
+              prefixIcon: Icon(Icons.subject_rounded, color: AppColors.primary),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'general', child: Text('General Inquiry')),
+              DropdownMenuItem(value: 'registration', child: Text('Registration Help')),
+              DropdownMenuItem(value: 'contact-request', child: Text('Contact Request')),
+              DropdownMenuItem(value: 'complaint', child: Text('Complaint')),
+              DropdownMenuItem(value: 'partnership', child: Text('Partnership')),
+            ],
+            onChanged: (v) => setState(() => _subject = v ?? _subject),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _message,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Message',
+              alignLabelWithHint: true,
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(bottom: 60),
+                child: Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
+              ),
+            ),
+            validator: (v) => validateMinLength(v, 10, 'Message'),
+          ),
+          const SizedBox(height: 18),
+          _submitting
+              ? const Center(child: CircularProgressIndicator())
+              : PrimaryButton(
+                  label: 'Send Message',
+                  icon: Icons.send_rounded,
+                  expanded: true,
+                  onPressed: _submit,
+                ),
         ],
       ),
     );
@@ -451,45 +536,109 @@ class _ContactScreenState extends State<ContactScreen> {
 class _ContactInfoTile extends StatelessWidget {
   const _ContactInfoTile({
     required this.icon,
+    required this.iconGradient,
     required this.title,
     required this.value,
     required this.onTap,
+    this.hint,
+    this.delay = Duration.zero,
   });
 
-  final String icon;
+  final IconData icon;
+  final Gradient iconGradient;
   final String title;
   final String value;
+  final String? hint;
   final VoidCallback onTap;
+  final Duration delay;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 26)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(value, style: const TextStyle(color: AppColors.textMuted)),
-                  ],
+    return FadeSlide(
+      delay: delay,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
                 ),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-            ],
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: iconGradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.22),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        value,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (hint != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          hint!,
+                          style: const TextStyle(color: AppColors.textMuted, fontSize: 12.5),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: const BoxDecoration(
+                    color: AppColors.blush,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

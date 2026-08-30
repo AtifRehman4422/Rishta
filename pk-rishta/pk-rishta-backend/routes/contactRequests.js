@@ -10,27 +10,22 @@ const {
 
   respondToContactRequest,
 
+  cancelContactRequest,
+
   getContactAccessStatus,
 
 } = require('../controllers/contactRequestController');
 
-const { authenticate } = require('../middleware/auth');
-
-
+const { authenticate, requireCompleteProfile } = require('../middleware/auth');
 
 const router = express.Router();
 
-
-
-router.get('/', authenticate, getMyContactRequests);
-
-router.get('/incoming', authenticate, getIncomingContactRequests);
-
-router.post('/', authenticate, createContactRequest);
-
+router.get('/', authenticate, requireCompleteProfile, getMyContactRequests);
+router.get('/incoming', authenticate, requireCompleteProfile, getIncomingContactRequests);
+router.post('/', authenticate, requireCompleteProfile, createContactRequest);
 router.patch('/:id/respond', authenticate, respondToContactRequest);
-
-router.get('/status/:profileId', authenticate, getContactAccessStatus);
+router.patch('/:id/cancel', authenticate, cancelContactRequest);
+router.get('/status/:profileId', authenticate, requireCompleteProfile, getContactAccessStatus);
 
 
 

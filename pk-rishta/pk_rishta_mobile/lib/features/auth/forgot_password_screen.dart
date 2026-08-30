@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/validation.dart';
 import '../../core/widgets/auth_backdrop.dart';
 import '../../core/widgets/primary_button.dart';
 import 'login_screen.dart';
@@ -62,8 +63,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _sendOtp() async {
-    if (!_email.text.contains('@')) {
-      setState(() => _error = 'Enter a valid email');
+    final emailError = validateEmail(_email.text);
+    if (emailError != null) {
+      setState(() => _error = emailError);
       return;
     }
     setState(() {
@@ -112,8 +114,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _reset() async {
-    if (_otp.text.trim().isEmpty || _password.text.length < 8) {
-      setState(() => _error = 'Enter OTP and a new password (min 8 chars)');
+    if (_otp.text.trim().length < 4) {
+      setState(() => _error = 'Enter the OTP from your email');
+      return;
+    }
+    final passwordError = validatePassword(_password.text);
+    if (passwordError != null) {
+      setState(() => _error = passwordError);
       return;
     }
     setState(() {
@@ -140,7 +147,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return AuthBackdrop(
       title: 'Forgot password',
-      subtitle: 'OTP aapki email par jayega',
+      subtitle: 'An OTP will be sent to your email',
       headerTrailing: TextButton(
         onPressed: () {
           Navigator.of(context).pushReplacement(

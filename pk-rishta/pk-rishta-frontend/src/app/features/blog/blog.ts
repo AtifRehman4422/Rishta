@@ -19,12 +19,12 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       </div>
       <div class="container hero-inner">
         <div class="hero-badge animate-fade-in-up">
-          <span class="pulse-dot"></span> Rishta & Marriage Insights
+          <span class="pulse-dot"></span> Match & Marriage Insights
         </div>
         <h1 class="animate-fade-in-up delay-1">PK Rishta <span class="gold">Blog</span></h1>
         <p class="text-urdu animate-fade-in-up delay-2">شادی اور رشتہ کی رہنمائی</p>
         <p class="hero-sub animate-fade-in-up delay-3">
-          Expert guides on finding halal rishtay, marriage preparation, safety, and Pakistani family traditions.
+          Expert guides on finding halal matches, marriage preparation, safety, and Pakistani family traditions.
         </p>
       </div>
     </section>
@@ -78,7 +78,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       </div>
 
       <div class="blog-cta card animate-fade-in-up delay-3">
-        <h3>Ready to Find Your Rishta?</h3>
+        <h3>Ready to Find Your Match?</h3>
         <p>Join thousands of families on Pakistan's trusted matrimonial platform.</p>
         <div class="cta-btns">
           <a routerLink="/register" class="btn btn-primary">Register Free</a>
@@ -289,10 +289,10 @@ export class BlogComponent implements OnInit {
   readonly sparkles = [1, 2, 3, 4, 5];
 
   ngOnInit(): void {
-    this.title.setTitle('Blog — Rishta & Marriage Guides | PK Rishta');
+    this.title.setTitle('Blog — Match & Marriage Guides | PK Rishta');
     this.meta.updateTag({
       name: 'description',
-      content: 'Read expert articles on finding rishta in Pakistan, marriage tips, profile advice, safety, and family traditions.',
+      content: 'Read expert articles on finding a match in Pakistan, marriage tips, profile advice, safety, and family traditions.',
     });
   }
 

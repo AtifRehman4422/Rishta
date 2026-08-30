@@ -185,6 +185,8 @@ import { FloatingHeartsComponent } from '../floating-hearts/floating-hearts';
       width: 180px;
       height: 180px;
       margin: 0 auto 1.25rem;
+      padding: 0;
+      overflow: hidden;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.1);
       border: 2px solid rgba(212, 175, 55, 0.45);
@@ -195,10 +197,11 @@ import { FloatingHeartsComponent } from '../floating-hearts/floating-hearts';
     }
 
     .brand-logo {
-      height: 130px;
-      width: auto;
-      max-width: 155px;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      object-fit: cover;
+      object-position: center;
       filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
     }
 
@@ -426,7 +429,7 @@ export class AuthShellComponent {
 
   readonly features = [
     { icon: '🔒', text: 'Admin-verified contact sharing', delay: '0.15s' },
-    { icon: '💑', text: 'Halal rishta search across Pakistan', delay: '0.25s' },
+    { icon: '💑', text: 'Halal match search across Pakistan', delay: '0.25s' },
     { icon: '✓', text: 'Free registration & profile creation', delay: '0.35s' },
   ];
 }

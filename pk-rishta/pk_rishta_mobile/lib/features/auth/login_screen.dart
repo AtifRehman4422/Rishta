@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/validation.dart';
 import '../../core/widgets/auth_backdrop.dart';
 import '../../core/widgets/fade_slide.dart';
 import '../../core/widgets/primary_button.dart';
@@ -26,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _otp = TextEditingController();
   bool _submitting = false;
   bool _obscure = true;
-  bool _demoOpen = false;
   bool _otpStep = false;
   String? _error;
   String? _info;
@@ -141,27 +141,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _fillDemo(String type) {
-    setState(() {
-      _error = null;
-      if (type == 'admin') {
-        _email.text = 'atif-admin442@pkrishta.com';
-        _password.text = 'ARadmin@442';
-      } else if (type == 'ahmed') {
-        _email.text = 'ahmed.khan@example.com';
-        _password.text = 'User@123';
-      } else {
-        _email.text = 'zainab.hussain@example.com';
-        _password.text = 'User@123';
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return AuthBackdrop(
       title: 'Welcome back',
-      subtitle: 'Sign in to continue your rishta journey',
+      subtitle: 'Sign in to continue your journey',
       headerTrailing: TextButton(
         onPressed: () {
           Navigator.of(context).pushReplacement(
@@ -264,8 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         label: 'Email',
                         prefixIcon: const Icon(Icons.mail_outline_rounded),
                       ),
-                      validator: (value) =>
-                          value == null || !value.contains('@') ? 'Enter a valid email' : null,
+                      validator: (value) => validateEmail(value),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -330,186 +313,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
             ),
-            const SizedBox(height: 22),
-            FadeSlide(
-              delay: 240.ms,
-              child: _DemoPanel(
-                open: _demoOpen,
-                onToggle: () => setState(() => _demoOpen = !_demoOpen),
-                onFill: _fillDemo,
-              ),
-            ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DemoPanel extends StatelessWidget {
-  const _DemoPanel({
-    required this.open,
-    required this.onToggle,
-    required this.onFill,
-  });
-
-  final bool open;
-  final VoidCallback onToggle;
-  final void Function(String type) onFill;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(20),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.blush,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.bolt_rounded, color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Quick demo login',
-                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                        ),
-                        Text(
-                          'Same accounts as website',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  AnimatedRotation(
-                    turns: open ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 220),
-                    child: const Icon(Icons.expand_more_rounded, color: AppColors.textMuted),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox(width: double.infinity),
-            secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-                  const _DemoLine(
-                    label: 'Admin',
-                    value: 'atif-admin442@pkrishta.com',
-                  ),
-                  const SizedBox(height: 6),
-                  const _DemoLine(
-                    label: 'Ahmed',
-                    value: 'ahmed.khan@example.com',
-                  ),
-                  const SizedBox(height: 6),
-                  const _DemoLine(
-                    label: 'Zainab',
-                    value: 'zainab.hussain@example.com',
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _DemoChip(label: 'Admin', onTap: () => onFill('admin')),
-                      _DemoChip(label: 'Ahmed', onTap: () => onFill('ahmed')),
-                      _DemoChip(label: 'Zainab', onTap: () => onFill('zainab')),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            crossFadeState: open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 220),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DemoLine extends StatelessWidget {
-  const _DemoLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return RichText(
-      text: TextSpan(
-        style: const TextStyle(fontSize: 12, color: AppColors.text, height: 1.4),
-        children: [
-          TextSpan(
-            text: '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
-          ),
-          TextSpan(text: value),
-        ],
-      ),
-    );
-  }
-}
-
-class _DemoChip extends StatelessWidget {
-  const _DemoChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.blush,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(
-            'Use $label',
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
         ),
       ),
     );

@@ -1,7 +1,0 @@
-◇ injected env (16) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-PK Rishta Backend running on port 3000
-Primary frontend: http://localhost:4200
-Listening on 0.0.0.0 so physical phones can use this PC LAN IP:3000
-Dev CORS: localhost + private LAN (Flutter web + Angular + real devices)
-Tip: Use HTTPS in production so passwords and data are encrypted on the network.

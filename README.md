@@ -1,2 +1,0 @@
-# Rishta
-This Application developed .

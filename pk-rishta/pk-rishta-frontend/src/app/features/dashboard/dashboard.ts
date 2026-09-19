@@ -270,7 +270,7 @@ type MainSection = 'contact' | 'complaints';
             @if (complaintTab() === 'filed') {
               <p>You have not filed any complaints yet.</p>
             } @else {
-              <p>No messages from PK Rishta Admin yet.</p>
+              <p>No messages from Hum Rishta Admin yet.</p>
             }
           </div>
         } @else {
@@ -284,7 +284,7 @@ type MainSection = 'contact' | 'complaints';
                     otherLabel: complaintTab() === 'filed' ? 'Against' : 'From',
                     otherName: complaintTab() === 'filed'
                       ? c.reported_first_name + ' ' + c.reported_last_name
-                      : 'PK Rishta Admin',
+                      : 'Hum Rishta Admin',
                     otherId: complaintTab() === 'filed' ? c.reported_profile_id : null
                   }"
                 />
@@ -305,7 +305,7 @@ type MainSection = 'contact' | 'complaints';
     <ng-template #complaintTpl let-c let-otherLabel="otherLabel" let-otherName="otherName" let-otherId="otherId" let-isSupport="isSupport">
       <div class="complaint-header">
         <span class="badge" [class]="'badge-' + c.status">{{ c.status }}</span>
-        <span class="complaint-category">{{ isSupport ? 'PK Rishta Support' : formatCategory(c.category) }}</span>
+        <span class="complaint-category">{{ isSupport ? 'Hum Rishta Support' : formatCategory(c.category) }}</span>
         <span class="complaint-date">{{ formatDate(c.created_at) }}</span>
       </div>
       <p class="complaint-party">

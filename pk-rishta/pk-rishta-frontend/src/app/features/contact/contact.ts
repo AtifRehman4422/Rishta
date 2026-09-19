@@ -22,7 +22,7 @@ import { ContactService } from '../../core/services/contact.service';
         <div class="hero-badge animate-fade-in-up">
           <span class="pulse-dot"></span> We're Here to Help
         </div>
-        <h1 class="animate-fade-in-up delay-1">Contact <span class="gold">PK Rishta</span></h1>
+        <h1 class="animate-fade-in-up delay-1">Contact <span class="gold">Hum Rishta</span></h1>
         <p class="text-urdu animate-fade-in-up delay-2">ہم سے رابطہ کریں</p>
         <p class="hero-sub animate-fade-in-up delay-3">
           Questions about profiles, registration, or admin verification? Reach out — we reply within 24 hours.
@@ -396,9 +396,9 @@ export class ContactComponent {
     {
       icon: '📧',
       title: 'Email Us',
-      value: 'info@pkrishta.com',
+      value: 'humrishta@gmail.com',
       hint: 'We reply within 24 hours',
-      href: 'mailto:info@pkrishta.com',
+      href: 'mailto:humrishta@gmail.com',
       color: '#9B1B30',
       external: false,
     },

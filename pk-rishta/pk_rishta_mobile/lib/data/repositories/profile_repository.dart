@@ -92,6 +92,14 @@ class ProfileRepository {
     return Profile.fromJson(result.data as Map<String, dynamic>);
   }
 
+  Future<void> shareAddress(String profileId) async {
+    await _client.post('/address-disclosures/$profileId');
+  }
+
+  Future<void> hideAddress(String profileId) async {
+    await _client.delete('/address-disclosures/$profileId');
+  }
+
   Future<List<Profile>> getFavorites() async {
     final result = await _client.get('/favorites', query: {'limit': '50'});
     final list = result.data as List? ?? [];

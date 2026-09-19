@@ -94,6 +94,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/favorites', favoriteRoutes);
+app.use('/api/address-disclosures', require('./routes/addressDisclosures'));
 app.use('/api/dropdowns', require('./routes/dropdowns'));
 app.use('/api/admin', adminRoutes);
 
@@ -119,13 +120,13 @@ function startServer() {
       cert: fs.readFileSync(sslCert),
     };
     https.createServer(credentials, app).listen(PORT, () => {
-      console.log(`PK Rishta Backend (HTTPS) running on port ${PORT}`);
+      console.log(`Hum Rishta Backend (HTTPS) running on port ${PORT}`);
     });
     return;
   }
 
   http.createServer(app).listen(PORT, '0.0.0.0', () => {
-    console.log(`PK Rishta Backend running on port ${PORT}`);
+    console.log(`Hum Rishta Backend running on port ${PORT}`);
     if (!isProduction) {
       console.log(`Primary frontend: ${FRONTEND_URL}`);
       console.log('Listening on 0.0.0.0 so physical phones can use this PC LAN IP:3000');

@@ -104,7 +104,7 @@ import { AdminService } from '../../../core/services/admin.service';
               </div>
               <p class="status-help">
                 <strong>Mark Read</strong> = you opened it (no email is sent).
-                <strong>Send Email Reply</strong> = emails the sender from PK Rishta and sets status to Replied.
+                <strong>Send Email Reply</strong> = emails the sender from Hum Rishta and sets status to Replied.
               </p>
               @if (m.admin_notes) {
                 <p class="saved-notes">Saved notes: {{ m.admin_notes }}</p>

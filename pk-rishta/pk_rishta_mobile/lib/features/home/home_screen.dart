@@ -148,7 +148,7 @@ class HomeScreenState extends State<HomeScreen> {
                     onCompleteProfile: onCompleteProfile,
                   ),
                 ),
-                SliverToBoxAdapter(child: _SectionHeader(title: 'Why Families Trust PK Rishta', urdu: 'خاندانوں کا اعتماد — ہمارا فخر', delay: 200.ms)),
+                SliverToBoxAdapter(child: _SectionHeader(title: 'Why Families Trust Hum Rishta', urdu: 'خاندانوں کا اعتماد — ہمارا فخر', delay: 200.ms)),
                 SliverToBoxAdapter(
                   child: SizedBox(
                     height: 188,
@@ -454,7 +454,7 @@ class _Hero extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const BrandLogo(height: 56, heroTag: 'pk-logo'),
+                    const BrandLogo(height: 56, heroTag: 'hum-logo'),
                     const Spacer(),
                     const NotificationBellButton(),
                   ],

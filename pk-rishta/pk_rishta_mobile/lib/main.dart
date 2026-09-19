@@ -11,16 +11,16 @@ Future<void> main() async {
   await ApiConfig.init();
   await AuthController.instance.bootstrap();
   await NotificationController.instance.bootstrap();
-  runApp(const PkRishtaApp());
+  runApp(const HumRishtaApp());
 }
 
-class PkRishtaApp extends StatelessWidget {
-  const PkRishtaApp({super.key});
+class HumRishtaApp extends StatelessWidget {
+  const HumRishtaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PK Rishta',
+      title: 'Hum Rishta',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light().copyWith(
         pageTransitionsTheme: const PageTransitionsTheme(

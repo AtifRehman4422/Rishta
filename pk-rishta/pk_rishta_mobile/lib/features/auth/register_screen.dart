@@ -191,7 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthBackdrop(
-      title: _otpStep ? 'Verify email' : 'Join PK Rishta',
+      title: _otpStep ? 'Verify email' : 'Join Hum Rishta',
       subtitle: _otpStep
           ? 'Enter the OTP sent to your email'
           : 'Create your free account & begin a halal match journey',

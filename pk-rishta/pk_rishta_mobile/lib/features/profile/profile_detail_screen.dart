@@ -32,6 +32,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   bool _loading = true;
   String? _error;
   bool _sending = false;
+  bool _sharingAddress = false;
   int _requestLimit = 3;
   bool _savingLimit = false;
 
@@ -142,6 +143,64 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       );
     } finally {
       if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _shareAddress() async {
+    final auth = AuthController.instance;
+    if (!auth.isLoggedIn) {
+      final ok = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      if (ok != true) return;
+    }
+    if (AuthController.instance.needsProfileCompletion) {
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const MyProfileScreen()),
+      );
+      return;
+    }
+    setState(() => _sharingAddress = true);
+    try {
+      await _repo.shareAddress(widget.profileId);
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your complete address is now visible to this member.'),
+          backgroundColor: Color(0xFF15803D),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: const Color(0xFFB91C1C)),
+      );
+    } finally {
+      if (mounted) setState(() => _sharingAddress = false);
+    }
+  }
+
+  Future<void> _hideAddress() async {
+    setState(() => _sharingAddress = true);
+    try {
+      await _repo.hideAddress(widget.profileId);
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your complete address is hidden from this member again.'),
+          backgroundColor: Color(0xFF15803D),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: const Color(0xFFB91C1C)),
+      );
+    } finally {
+      if (mounted) setState(() => _sharingAddress = false);
     }
   }
 
@@ -698,12 +757,30 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                             ? profile.country
                             : profile.province,
                       ),
-                      _InfoRow('Own House (Pakistan)', profile.houseOwnLocation),
-                      _InfoRow('Rented House (Pakistan)', profile.houseRentLocation),
-                      if (_isNotEmpty(profile.abroadCountry)) ...[
+                      _InfoRow(
+                        'House (Pakistan)',
+                        _houseTypeLabel(profile.pkHouseType, profile),
+                      ),
+                      _InfoRow(
+                        'Complete Address (Pakistan)',
+                        _showCompleteAddress(profile)
+                            ? (profile.houseOwnLocation ?? profile.houseRentLocation)
+                            : 'Hidden until they share',
+                      ),
+                      if (_isNotEmpty(profile.abroadCountry) ||
+                          _isNotEmpty(profile.abroadHouseType)) ...[
                         _InfoRow('Abroad Country', profile.abroadCountry),
-                        _InfoRow('Own House (Abroad)', profile.abroadHouseOwnLocation),
-                        _InfoRow('Rented House (Abroad)', profile.abroadHouseRentLocation),
+                        _InfoRow(
+                          'House (Abroad)',
+                          _houseTypeLabel(profile.abroadHouseType, profile, abroad: true),
+                        ),
+                        _InfoRow(
+                          'Complete Address (Abroad)',
+                          _showCompleteAddress(profile)
+                              ? (profile.abroadHouseOwnLocation ??
+                                  profile.abroadHouseRentLocation)
+                              : 'Hidden until they share',
+                        ),
                       ],
                     ],
                   ),
@@ -735,6 +812,13 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                 ],
                 const SizedBox(height: 24),
                 if (!auth.isAdmin) ...[
+                  if (auth.isLoggedIn && auth.user?.profileId != profile.id)
+                    _AddressShareCard(
+                      profile: profile,
+                      sharing: _sharingAddress,
+                      onShare: _shareAddress,
+                      onHide: _hideAddress,
+                    ),
                   if (!auth.isLoggedIn)
                     Container(
                       width: double.infinity,
@@ -768,6 +852,25 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   }
 
   bool _isNotEmpty(String? value) => value != null && value.trim().isNotEmpty;
+
+  bool _showCompleteAddress(Profile profile) {
+    final auth = AuthController.instance;
+    if (auth.isAdmin || auth.user?.profileId == profile.id) return true;
+    return profile.addressVisible;
+  }
+
+  String _houseTypeLabel(String? type, Profile profile, {bool abroad = false}) {
+    if (type == 'own') return 'Own';
+    if (type == 'rent') return 'Rent';
+    if (abroad) {
+      if (_isNotEmpty(profile.abroadHouseOwnLocation)) return 'Own';
+      if (_isNotEmpty(profile.abroadHouseRentLocation)) return 'Rent';
+    } else {
+      if (_isNotEmpty(profile.houseOwnLocation)) return 'Own';
+      if (_isNotEmpty(profile.houseRentLocation)) return 'Rent';
+    }
+    return '---';
+  }
 
   List<_InfoRow> _prefsRows(PartnerPreferences prefs) {
     return [
@@ -850,6 +953,72 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
           }
           return _detailView(profile!);
         },
+      ),
+    );
+  }
+}
+
+class _AddressShareCard extends StatelessWidget {
+  const _AddressShareCard({
+    required this.profile,
+    required this.sharing,
+    required this.onShare,
+    required this.onHide,
+  });
+
+  final Profile profile;
+  final bool sharing;
+  final VoidCallback onShare;
+  final VoidCallback onHide;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF59E0B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Complete Address',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            profile.theySharedAddress
+                ? 'This member shared their complete address with you.'
+                : 'Their full address stays hidden until they share it with you.',
+            style: const TextStyle(color: AppColors.textMuted, height: 1.4),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            profile.iSharedAddress
+                ? 'You shared your address. They can see it on your profile.'
+                : 'Share yours so they can see your complete address. You will see theirs when they share too.',
+            style: const TextStyle(color: AppColors.textMuted, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          if (sharing)
+            const Center(child: CircularProgressIndicator())
+          else if (profile.iSharedAddress)
+            OutlinedButton(
+              onPressed: onHide,
+              child: const Text('Hide my address from them'),
+            )
+          else
+            PrimaryButton(
+              label: 'Share my complete address',
+              icon: Icons.home_rounded,
+              expanded: true,
+              onPressed: onShare,
+            ),
+        ],
       ),
     );
   }

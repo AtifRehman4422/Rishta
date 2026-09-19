@@ -97,6 +97,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             colors: [Color(0xFF92400E), Color(0xFFF59E0B)],
           ),
         );
+      case 'address_shared':
+        return (
+          Icons.home_rounded,
+          const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF92400E), Color(0xFFF59E0B)],
+          ),
+        );
       default:
         return (
           Icons.notifications_rounded,

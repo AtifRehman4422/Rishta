@@ -11,7 +11,7 @@ import { ScrollContainerDirective } from '../../shared/directives/scroll-contain
     <div class="admin-layout">
       <aside class="sidebar">
         <div class="sidebar-header">
-          <img src="/images/logo.png" alt="PK Rishta" class="sidebar-logo" />
+          <img src="/images/logo.png" alt="Hum Rishta" class="sidebar-logo" />
           <div>
             <span class="admin-badge">Admin Panel</span>
           </div>
@@ -72,9 +72,9 @@ import { ScrollContainerDirective } from '../../shared/directives/scroll-contain
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     .sidebar-logo {
-      height: 48px;
+      height: 64px;
       width: auto;
-      max-width: 140px;
+      max-width: 180px;
       object-fit: contain;
       object-position: left center;
       background: transparent;

@@ -24,7 +24,7 @@ interface StatCard {
       <header class="dash-header animate-fade-in-up">
         <div>
           <h1>Admin Dashboard</h1>
-          <p class="page-desc">Overview of PK Rishta platform</p>
+          <p class="page-desc">Overview of Hum Rishta platform</p>
         </div>
         <div class="header-badge">
           <span class="live-dot"></span>

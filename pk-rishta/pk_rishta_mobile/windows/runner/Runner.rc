@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "pk_rishta_mobile" "\0"
+            VALUE "CompanyName", "com.humrishta" "\0"
+            VALUE "FileDescription", "Hum Rishta" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "pk_rishta_mobile" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "pk_rishta_mobile.exe" "\0"
-            VALUE "ProductName", "pk_rishta_mobile" "\0"
+            VALUE "InternalName", "hum_rishta" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.humrishta. All rights reserved." "\0"
+            VALUE "OriginalFilename", "hum_rishta.exe" "\0"
+            VALUE "ProductName", "Hum Rishta" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

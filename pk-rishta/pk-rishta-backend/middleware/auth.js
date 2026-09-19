@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'pk-rishta-dev-only-secret-not-for-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'hum-rishta-dev-only-secret-not-for-production';
 function generateToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },

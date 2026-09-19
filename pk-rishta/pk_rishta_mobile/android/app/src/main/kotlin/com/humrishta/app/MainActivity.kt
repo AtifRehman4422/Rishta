@@ -1,4 +1,4 @@
-package com.example.pk_rishta_mobile
+package com.humrishta.app
 
 import io.flutter.embedding.android.FlutterActivity
 

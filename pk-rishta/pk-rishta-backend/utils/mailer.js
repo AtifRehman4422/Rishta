@@ -5,7 +5,7 @@ const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
 const SMTP_USER = (process.env.SMTP_USER || '').trim();
 const SMTP_PASS = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
-const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || 'PK Rishta <noreply@pkrishta.com>';
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || 'Hum Rishta <noreply@humrishta.com>';
 
 let transporter;
 
@@ -91,11 +91,11 @@ async function sendOtpEmail({ to, code, purpose }) {
   const isReset = purpose === 'password_reset';
   const title = isReset ? 'Password Reset OTP' : 'Email Verification OTP';
   const action = isReset
-    ? 'Use this code to reset your PK Rishta password.'
-    : 'Use this code to verify your PK Rishta account.';
+    ? 'Use this code to reset your Hum Rishta password.'
+    : 'Use this code to verify your Hum Rishta account.';
 
   const text = [
-    `PK Rishta — ${title}`,
+    `Hum Rishta — ${title}`,
     '',
     action,
     '',
@@ -107,7 +107,7 @@ async function sendOtpEmail({ to, code, purpose }) {
 
   const html = `
     <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#fff8f3;border:1px solid #f0ddd0;border-radius:16px;">
-      <h2 style="color:#9B1B30;margin:0 0 8px;">PK Rishta</h2>
+      <h2 style="color:#9B1B30;margin:0 0 8px;">Hum Rishta</h2>
       <p style="color:#2D1B1B;font-size:16px;margin:0 0 16px;"><strong>${title}</strong></p>
       <p style="color:#7A6363;margin:0 0 20px;">${action}</p>
       <div style="letter-spacing:8px;font-size:28px;font-weight:700;color:#9B1B30;background:#fff;border:1px dashed #D4AF37;border-radius:12px;padding:16px;text-align:center;">
@@ -117,7 +117,7 @@ async function sendOtpEmail({ to, code, purpose }) {
     </div>
   `;
 
-  return sendMail({ to, subject: `PK Rishta — ${title}`, text, html });
+  return sendMail({ to, subject: `Hum Rishta — ${title}`, text, html });
 }
 
 module.exports = { sendMail, sendOtpEmail, smtpHelpMessage, warnIfSmtpMisconfigured };

@@ -17,7 +17,7 @@ import { RouterLink } from '@angular/router';
     <div class="container page-body">
       <div class="legal-content card animate-fade-in-up delay-1">
         <p class="intro">
-          PK Rishta ("we", "our", "us") operates the website pkrishta.com and is committed to protecting your privacy.
+          Hum Rishta ("we", "our", "us") operates the website humrishta.com and is committed to protecting your privacy.
           This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our matrimonial platform.
         </p>
 
@@ -40,7 +40,7 @@ import { RouterLink } from '@angular/router';
         <section class="legal-section contact-section">
           <h2>Contact Us</h2>
           <p>If you have questions about this Privacy Policy, contact us at:</p>
-          <p><strong>Email:</strong> info@pkrishta.com</p>
+          <p><strong>Email:</strong> humrishta@gmail.com</p>
           <p><strong>Website:</strong> <a routerLink="/contact">Contact Page</a></p>
         </section>
       </div>
@@ -82,7 +82,7 @@ export class PrivacyComponent implements OnInit {
     },
     {
       title: '2. How We Use Your Information',
-      paragraphs: ['We use collected information to operate and improve PK Rishta:'],
+      paragraphs: ['We use collected information to operate and improve Hum Rishta:'],
       list: [
         'Create and manage your matrimonial profile',
         'Process contact requests and admin verification',
@@ -145,7 +145,7 @@ export class PrivacyComponent implements OnInit {
     {
       title: '9. Children',
       paragraphs: [
-        'PK Rishta is intended for adults seeking marriage (18 years and older). We do not knowingly collect information from children under 18.',
+        'Hum Rishta is intended for adults seeking marriage (18 years and older). We do not knowingly collect information from children under 18.',
       ],
     },
     {
@@ -157,10 +157,10 @@ export class PrivacyComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.title.setTitle('Privacy Policy | PK Rishta');
+    this.title.setTitle('Privacy Policy | Hum Rishta');
     this.meta.updateTag({
       name: 'description',
-      content: 'PK Rishta Privacy Policy — how we collect, use, and protect your personal information on our matrimonial platform.',
+      content: 'Hum Rishta Privacy Policy — how we collect, use, and protect your personal information on our matrimonial platform.',
     });
   }
 }

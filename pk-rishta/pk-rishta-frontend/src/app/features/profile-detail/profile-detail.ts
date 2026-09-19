@@ -245,6 +245,28 @@ import {
             </div>
           }
 
+          @if (auth.isLoggedIn() && !auth.isAdmin() && !isOwnProfile()) {
+            <div class="status-card card address-share-card animate-fade-in-up">
+              <h3>🏠 Complete Address</h3>
+              @if (profile()!.they_shared_address) {
+                <p class="contact-shared-note">This member shared their complete address with you.</p>
+              } @else {
+                <p>Their full address stays hidden until they share it with you.</p>
+              }
+              @if (profile()!.i_shared_address) {
+                <p class="contact-shared-note">You shared your address. They can see it on your profile.</p>
+                <button class="btn btn-outline btn-sm" (click)="hideMyAddress()" [disabled]="sharingAddress()">
+                  {{ sharingAddress() ? 'Updating...' : 'Hide my address from them' }}
+                </button>
+              } @else {
+                <p>Share yours so they can see your complete address. You will see theirs when they share too.</p>
+                <button class="btn btn-primary" (click)="shareMyAddress()" [disabled]="sharingAddress()">
+                  {{ sharingAddress() ? 'Sharing...' : 'Share my complete address' }}
+                </button>
+              }
+            </div>
+          }
+
           <div class="detail-ad detail-ad-top">
             <app-ad-slot [slot]="adSlots.profileDetailTop" format="horizontal" />
           </div>
@@ -401,12 +423,20 @@ import {
                   } @else {
                     <div class="info-item"><span>Province</span><strong>{{ profile()!.province || '---' }}</strong></div>
                   }
-                  <div class="info-item"><span>Own House (Pakistan)</span><strong>{{ profile()!.house_own_location || '---' }}</strong></div>
-                  <div class="info-item"><span>Rented House (Pakistan)</span><strong>{{ profile()!.house_rent_location || '---' }}</strong></div>
-                  @if (profile()!.abroad_country) {
-                    <div class="info-item"><span>Abroad Country</span><strong>{{ profile()!.abroad_country }}</strong></div>
-                    <div class="info-item"><span>Own House (Abroad)</span><strong>{{ profile()!.abroad_house_own_location || '---' }}</strong></div>
-                    <div class="info-item"><span>Rented House (Abroad)</span><strong>{{ profile()!.abroad_house_rent_location || '---' }}</strong></div>
+                  <div class="info-item"><span>House (Pakistan)</span><strong>{{ houseTypeLabel(profile()!.pk_house_type, profile()!) }}</strong></div>
+                  @if (showCompleteAddress()) {
+                    <div class="info-item"><span>Complete Address (Pakistan)</span><strong>{{ pakistanAddress(profile()!) }}</strong></div>
+                  } @else {
+                    <div class="info-item"><span>Complete Address (Pakistan)</span><strong>🔒 Hidden until they share</strong></div>
+                  }
+                  @if (profile()!.abroad_country || profile()!.abroad_house_type) {
+                    <div class="info-item"><span>Abroad Country</span><strong>{{ profile()!.abroad_country || '---' }}</strong></div>
+                    <div class="info-item"><span>House (Abroad)</span><strong>{{ houseTypeLabel(profile()!.abroad_house_type, profile()!, true) }}</strong></div>
+                    @if (showCompleteAddress()) {
+                      <div class="info-item"><span>Complete Address (Abroad)</span><strong>{{ abroadAddress(profile()!) }}</strong></div>
+                    } @else {
+                      <div class="info-item"><span>Complete Address (Abroad)</span><strong>🔒 Hidden until they share</strong></div>
+                    }
                   }
                 </div>
               </div>
@@ -579,6 +609,8 @@ import {
     .reject-card { border-left: 4px solid #ef4444; background: #fef2f2; }
     .warn-card { border-left: 4px solid #f59e0b; background: #fffbeb; }
     .contact-card { border-left: 4px solid var(--primary); background: #f0fdf4; }
+    .address-share-card { border-left: 4px solid #b45309; background: #fffbeb; }
+    .address-share-card .btn { margin-top: 0.75rem; }
     .admin-view-card { border-left: 4px solid #7c3aed; background: #f5f3ff; }
     .admin-meta { font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--text); }
     .admin-actions {
@@ -744,6 +776,7 @@ export class ProfileDetailComponent implements OnInit {
   complaintMessage = signal('');
   complaintMessageType = signal<'success' | 'error'>('error');
   cancelling = signal(false);
+  sharingAddress = signal(false);
   savingRequestLimit = signal(false);
   requestLimitDraft = 3;
   readonly complaintErrors = new FormErrorState();
@@ -842,6 +875,96 @@ export class ProfileDetailComponent implements OnInit {
       error: (err) => {
         this.savingRequestLimit.set(false);
         this.message.set(err.error?.message || 'Could not update request slots');
+        this.messageType.set('error');
+      },
+    });
+  }
+
+  isOwnProfile(): boolean {
+    const id = this.profile()?.id;
+    return !!id && this.auth.currentUser()?.profile_id === id;
+  }
+
+  showCompleteAddress(): boolean {
+    return this.auth.isAdmin() || this.isOwnProfile() || !!this.profile()?.address_visible;
+  }
+
+  houseTypeLabel(
+    type: 'own' | 'rent' | null | undefined,
+    p: Profile,
+    abroad = false,
+  ): string {
+    if (type === 'own') return 'Own';
+    if (type === 'rent') return 'Rent';
+    if (abroad) {
+      if (p.abroad_house_own_location) return 'Own';
+      if (p.abroad_house_rent_location) return 'Rent';
+    } else {
+      if (p.house_own_location) return 'Own';
+      if (p.house_rent_location) return 'Rent';
+    }
+    return '---';
+  }
+
+  pakistanAddress(p: Profile): string {
+    return p.house_own_location || p.house_rent_location || '---';
+  }
+
+  abroadAddress(p: Profile): string {
+    return p.abroad_house_own_location || p.abroad_house_rent_location || '---';
+  }
+
+  private applyAddressFlags(flags: {
+    i_shared_address?: boolean;
+    they_shared_address?: boolean;
+    address_visible?: boolean;
+  }): void {
+    this.profile.update((x) => x
+      ? {
+          ...x,
+          i_shared_address: flags.i_shared_address,
+          they_shared_address: flags.they_shared_address,
+          address_visible: flags.address_visible,
+        }
+      : x);
+  }
+
+  shareMyAddress(): void {
+    const p = this.profile();
+    if (!p) return;
+    this.sharingAddress.set(true);
+    this.profileService.shareAddress(p.id).subscribe({
+      next: (res) => {
+        this.sharingAddress.set(false);
+        this.applyAddressFlags(res.data || {});
+        this.message.set(res.message || 'Your complete address is now visible to this member.');
+        this.messageType.set('success');
+        this.profileService.getById(p.id).subscribe({
+          next: (fresh) => this.profile.set(fresh.data),
+        });
+      },
+      error: (err) => {
+        this.sharingAddress.set(false);
+        this.message.set(err.error?.message || 'Could not share address');
+        this.messageType.set('error');
+      },
+    });
+  }
+
+  hideMyAddress(): void {
+    const p = this.profile();
+    if (!p) return;
+    this.sharingAddress.set(true);
+    this.profileService.hideAddress(p.id).subscribe({
+      next: (res) => {
+        this.sharingAddress.set(false);
+        this.applyAddressFlags(res.data || {});
+        this.message.set(res.message || 'Your complete address is hidden from this member again.');
+        this.messageType.set('success');
+      },
+      error: (err) => {
+        this.sharingAddress.set(false);
+        this.message.set(err.error?.message || 'Could not hide address');
         this.messageType.set('error');
       },
     });

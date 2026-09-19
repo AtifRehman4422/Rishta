@@ -24,9 +24,8 @@ async function expireStalePendingRequests() {
          reviewed_at = COALESCE(reviewed_at, NOW()),
          updated_at = NOW()
      WHERE status = 'pending'
-       AND created_at < NOW() - ($1 || ' days')::interval
-     RETURNING id, requester_profile_id, target_profile_id`,
-    [String(PENDING_EXPIRE_DAYS)]
+       AND created_at < DATE_SUB(NOW(), INTERVAL ${PENDING_EXPIRE_DAYS} DAY)
+     RETURNING id, requester_profile_id, target_profile_id`
   );
 
   for (const row of expired.rows) {

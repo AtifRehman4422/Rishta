@@ -27,9 +27,9 @@ import { FloatingHeartsComponent } from '../floating-hearts/floating-hearts';
           <div class="brand-content animate-slide-in-left">
             <div class="brand-hero">
               <div class="brand-logo-ring">
-                <img src="/images/logo.png" alt="PK Rishta" class="brand-logo" />
+                <img src="/images/logo.png" alt="Hum Rishta" class="brand-logo" />
               </div>
-              <h2 class="brand-title">PK <span class="gold">Rishta</span></h2>
+              <h2 class="brand-title">Hum <span class="gold">Rishta</span></h2>
             </div>
             <p class="brand-urdu text-urdu">پاکستان کا قابلِ اعتماد رشتہ پلیٹ فارم</p>
 
@@ -68,8 +68,10 @@ import { FloatingHeartsComponent } from '../floating-hearts/floating-hearts';
           <div class="auth-card-glow"></div>
           <header class="auth-header">
             <div class="auth-logo-wrap animate-float">
-              <img src="/images/logo.png" alt="PK Rishta" class="auth-logo-mobile" />
-              <span class="auth-mobile-title">PK <span class="gold">Rishta</span></span>
+              <div class="auth-logo-circle">
+                <img src="/images/logo.png" alt="Hum Rishta" class="auth-logo-mobile" />
+              </div>
+              <span class="auth-mobile-title">Hum <span class="gold">Rishta</span></span>
             </div>
             <div class="auth-ornament">✦ ✧ ✦</div>
             <h1>{{ title() }}</h1>
@@ -182,13 +184,13 @@ import { FloatingHeartsComponent } from '../floating-hearts/floating-hearts';
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 180px;
-      height: 180px;
+      width: 190px;
+      height: 190px;
       margin: 0 auto 1.25rem;
-      padding: 0;
+      padding: 4px;
       overflow: hidden;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
+      background: transparent;
       border: 2px solid rgba(212, 175, 55, 0.45);
       box-shadow:
         0 0 0 10px rgba(212, 175, 55, 0.08),
@@ -200,9 +202,10 @@ import { FloatingHeartsComponent } from '../floating-hearts/floating-hearts';
       width: 100%;
       height: 100%;
       max-width: none;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
-      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+      transform: scale(1.32);
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
     }
 
     .brand-title {
@@ -354,9 +357,31 @@ import { FloatingHeartsComponent } from '../floating-hearts/floating-hearts';
       margin-bottom: 0.75rem;
     }
 
+    .auth-logo-circle {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      border: 2px solid rgba(212, 175, 55, 0.45);
+      box-shadow:
+        0 0 0 6px rgba(212, 175, 55, 0.08),
+        0 8px 20px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      padding: 2px;
+    }
+
     .auth-logo-mobile {
-      height: 72px;
-      width: auto;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transform: scale(1.32);
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
     }
 
     .auth-mobile-title {

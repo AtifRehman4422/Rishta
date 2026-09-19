@@ -75,7 +75,7 @@ const testimonials = [
     city: 'Lahore',
     year: '2025',
     text:
-        'We found our match on PK Rishta. The platform is very professional and treats families with respect. Thank you!',
+        'We found our match on Hum Rishta. The platform is very professional and treats families with respect. Thank you!',
   ),
   Testimonial(
     name: 'Hina Malik',

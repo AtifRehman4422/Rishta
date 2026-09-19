@@ -1,6 +1,6 @@
-# PK Rishta Mobile (Flutter + Riverpod)
+# Hum Rishta Mobile (Flutter + Riverpod)
 
-Flutter app connected to `pk-rishta-backend` with the same core features as the Angular web app.
+Flutter app for Hum Rishta (humrishta.com), connected to the Node backend with the same core features as the Angular web app.
 
 ## Run
 

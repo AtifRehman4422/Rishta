@@ -24,7 +24,7 @@ import { RouterLink } from '@angular/router';
 
             <div class="logo-row">
 
-              <img src="/images/logo.png" alt="PK Rishta" class="footer-logo" />
+              <img src="/images/logo.png" alt="Hum Rishta" class="footer-logo" />
 
             </div>
 
@@ -60,7 +60,7 @@ import { RouterLink } from '@angular/router';
 
             <a routerLink="/terms">Terms of Service</a>
 
-            <a routerLink="/about">About PK Rishta</a>
+            <a routerLink="/about">About Hum Rishta</a>
 
           </div>
 
@@ -68,7 +68,7 @@ import { RouterLink } from '@angular/router';
 
             <h4>Contact</h4>
 
-            <span>info@pkrishta.com</span>
+            <span>humrishta@gmail.com</span>
 
             <span>+92 300 1234567</span>
 
@@ -80,7 +80,7 @@ import { RouterLink } from '@angular/router';
 
         <div class="footer-bottom">
 
-          <p>&copy; {{ year }} PK Rishta. All rights reserved.</p>
+          <p>&copy; {{ year }} Hum Rishta. All rights reserved.</p>
 
           <div class="footer-legal">
 
@@ -137,15 +137,10 @@ import { RouterLink } from '@angular/router';
     .logo-row { margin-bottom: 1rem; }
 
     .footer-logo {
-
-      height: 85px;
-
+      height: 96px;
       width: auto;
-
       object-fit: contain;
-
       background: transparent;
-
     }
 
     .footer-desc { opacity: 0.9; font-size: 0.9rem; line-height: 1.7; margin-bottom: 0.75rem; }

@@ -1,7 +1,15 @@
--- PK Rishta - Matrimonial Database Schema
+-- Hum Rishta - Matrimonial Database Schema
 -- Pakistan-focused matrimonial platform
+-- Database name: humrishta_db
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE DATABASE IF NOT EXISTS humrishta_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE humrishta_db;
+
+-- PostgreSQL-only (ignored / not used on MySQL):
+-- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Users table (authentication)
 CREATE TABLE IF NOT EXISTS users (
@@ -377,3 +385,15 @@ CREATE TABLE IF NOT EXISTS auth_otps (
 CREATE INDEX IF NOT EXISTS idx_auth_otps_email_purpose_active
   ON auth_otps(email, purpose, created_at DESC)
   WHERE consumed_at IS NULL;
+
+-- Mutual complete-address share: A shares with B so B can see A's address.
+CREATE TABLE IF NOT EXISTS address_disclosures (
+    discloser_profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    viewer_profile_id    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (discloser_profile_id, viewer_profile_id),
+    CHECK (discloser_profile_id <> viewer_profile_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_address_disclosures_viewer
+    ON address_disclosures (viewer_profile_id);

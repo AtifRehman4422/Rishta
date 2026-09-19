@@ -43,7 +43,7 @@ abstract final class ApiConfig {
   static String get _lanUrl => 'http://$_lanHost:3000/api';
 
   static String get _defaultUrl {
-    if (kReleaseMode) return 'https://pkrishta.com/api';
+    if (kReleaseMode) return 'https://humrishta.com/api';
     if (kIsWeb) return 'http://localhost:3000/api';
     try {
       if (Platform.isAndroid || Platform.isIOS) return _lanUrl;
@@ -76,7 +76,7 @@ abstract final class ApiConfig {
       return;
     }
     if (kReleaseMode) {
-      _resolved = 'https://pkrishta.com/api';
+      _resolved = 'https://humrishta.com/api';
       return;
     }
     if (kIsWeb) {

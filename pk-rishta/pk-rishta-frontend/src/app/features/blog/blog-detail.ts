@@ -45,7 +45,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
           <div class="article-footer animate-fade-in-up delay-2">
             <div class="share-cta card">
               <h3>Looking for a Blessed Rishta?</h3>
-              <p>Create your free profile on PK Rishta and connect with verified families.</p>
+              <p>Create your free profile on Hum Rishta and connect with verified families.</p>
               <a routerLink="/register" class="btn btn-primary">Register Free</a>
             </div>
           </div>
@@ -233,10 +233,10 @@ export class BlogDetailComponent implements OnInit {
     this.post = getPostBySlug(slug);
     if (this.post) {
       this.related = getRelatedPosts(slug);
-      this.title.setTitle(`${this.post.title} | PK Rishta Blog`);
+      this.title.setTitle(`${this.post.title} | Hum Rishta Blog`);
       this.meta.updateTag({ name: 'description', content: this.post.metaDescription });
     } else {
-      this.title.setTitle('Article Not Found | PK Rishta');
+      this.title.setTitle('Article Not Found | Hum Rishta');
     }
   }
 

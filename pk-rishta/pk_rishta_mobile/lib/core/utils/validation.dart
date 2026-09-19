@@ -1,5 +1,5 @@
 /// Shared field validators mirroring the web app
-/// (pk-rishta-frontend/src/app/core/utils/validation.ts).
+/// (frontend/src/app/core/utils/validation.ts).
 library;
 
 final RegExp emailRe = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');

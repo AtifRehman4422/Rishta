@@ -138,7 +138,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                     ),
                     _MenuItem(
                       icon: Icons.info_outline,
-                      label: 'About PK Rishta',
+                      label: 'About Hum Rishta',
                       onTap: () => _open(context, const AboutScreen()),
                     ),
                     _MenuItem(
@@ -300,7 +300,7 @@ class _GuestCard extends StatelessWidget {
                 const BrandLogo(height: 88),
                 const SizedBox(height: 16),
                 Text(
-                  'Welcome to PK Rishta',
+                  'Welcome to Hum Rishta',
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,

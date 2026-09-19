@@ -77,17 +77,17 @@ async function upsertProfile(userId, p) {
 
 async function seedUserProfile(p) {
   const hash = await bcrypt.hash(p.password, 12);
-  const userResult = await pool.query(
+  await pool.query(
     `INSERT INTO users (email, password_hash, role, is_active, is_verified)
      VALUES ($1, $2, 'user', true, true)
-     ON CONFLICT (email) DO UPDATE SET
-       password_hash = EXCLUDED.password_hash,
+     ON DUPLICATE KEY UPDATE
+       password_hash = VALUES(password_hash),
        is_active = true,
        is_verified = true,
-       updated_at = NOW()
-     RETURNING id`,
+       updated_at = NOW()`,
     [p.email, hash]
   );
+  const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [p.email]);
 
   await upsertProfile(userResult.rows[0].id, p);
 }
@@ -95,7 +95,7 @@ async function seedUserProfile(p) {
 async function importRishtaProfiles() {
   console.log('Importing rishta profiles from text file...');
 
-  const adminEmail = 'atif-admin442@pkrishta.com';
+  const adminEmail = 'admin442@humrishta.com';
   const rishtaProfiles = parseRishtaProfiles();
   const allProfiles = [...SAMPLE_PROFILES, ...rishtaProfiles];
 
@@ -103,9 +103,10 @@ async function importRishtaProfiles() {
   console.log(`Total with demo users: ${allProfiles.length}`);
 
   const keepEmails = [adminEmail, ...allProfiles.map((p) => p.email)];
+  const keepPlaceholders = keepEmails.map((_, i) => `$${i + 1}`).join(', ');
   const removed = await pool.query(
-    `DELETE FROM users WHERE role = 'user' AND NOT (email = ANY($1)) RETURNING email`,
-    [keepEmails]
+    `DELETE FROM users WHERE role = 'user' AND email NOT IN (${keepPlaceholders}) RETURNING email`,
+    keepEmails
   );
   if (removed.rows.length) {
     console.log(`Removed ${removed.rows.length} old user profile(s)`);

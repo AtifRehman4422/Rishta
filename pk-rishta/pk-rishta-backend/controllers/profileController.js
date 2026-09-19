@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db');
 const { isProduction } = require('../middleware/security');
 const { normalizeProfileLocation, normalizePartnerPreferencesLocation } = require('../utils/location');
+const { applyAddressPrivacy, hideCompleteAddress } = require('../utils/addressPrivacy');
 
 function fail(res, err, status = 500) {
   return res.status(status).json({
@@ -100,7 +101,7 @@ async function refreshProfileCompletion(profileId, client = pool) {
   const profile = completionResult.rows[0];
   const isComplete = calculateProfileComplete(
     profile,
-    profile.has_phone_contact === true,
+    !!profile.has_phone_contact,
     {
       min_age: profile.preferred_min_age,
       max_age: profile.preferred_max_age,
@@ -384,6 +385,11 @@ async function getProfileById(req, res) {
 
     stripNonAdminProfileFields(profile, isAdmin);
     coerceWeightKg(profile);
+    await applyAddressPrivacy(profile, {
+      viewerUserId: req.user.id,
+      isAdmin,
+      isOwn,
+    });
     profile.partner_preferences = await getPartnerPreferences(profile.id);
 
     if (isAdmin) {
@@ -653,7 +659,7 @@ async function adminCreateProfile(req, res) {
     }
 
     const stamp = Date.now().toString(36);
-    const email = (body.email || `admin.profile.${stamp}@pkrishta.local`).toLowerCase().trim();
+    const email = (body.email || `admin.profile.${stamp}@humrishta.local`).toLowerCase().trim();
     const password = body.password || 'User@123';
 
     const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -929,6 +935,7 @@ async function getMatchingProfiles(req, res) {
         }
 
         stripNonAdminProfileFields(candidate, req.user?.role === 'admin');
+        if (req.user?.role !== 'admin') hideCompleteAddress(candidate);
         return {
           ...candidate,
           match_score: Math.min(score, 100),

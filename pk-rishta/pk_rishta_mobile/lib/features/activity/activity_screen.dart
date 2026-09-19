@@ -799,7 +799,7 @@ class ActivityScreenState extends State<ActivityScreen> {
             _EmptyBox(
               text: _complaintTab == _ComplaintTab.filed
                   ? 'You have not filed any complaints yet.'
-                  : 'No messages from PK Rishta Admin yet.',
+                  : 'No messages from Hum Rishta Admin yet.',
             )
           else
             ...list.asMap().entries.map((e) {
@@ -807,7 +807,7 @@ class ActivityScreenState extends State<ActivityScreen> {
               final isSupport = _complaintTab == _ComplaintTab.support;
               final otherLabel = isSupport ? 'From' : 'Against';
               final otherName = isSupport
-                  ? 'PK Rishta Admin'
+                  ? 'Hum Rishta Admin'
                   : c.reportedName;
               final otherId = isSupport ? null : c.reportedProfileId;
               return Padding(
@@ -1485,7 +1485,7 @@ class _ComplaintCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isSupport ? 'PK Rishta Support' : item.category.replaceAll('_', ' '),
+                  isSupport ? 'Hum Rishta Support' : item.category.replaceAll('_', ' '),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),

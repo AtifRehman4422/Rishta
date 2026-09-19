@@ -20,7 +20,7 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _InfoScaffold(
-      title: 'About PK Rishta',
+      title: 'About Hum Rishta',
       urdu: 'ہمارے بارے میں',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,7 +32,7 @@ class AboutScreen extends StatelessWidget {
                 Text('Our Mission', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 const Text(
-                  'PK Rishta was created to make the search for a life partner simple, safe, and aligned with Islamic values. We connect Pakistani families — at home and overseas — through verified profiles and respectful community standards.',
+                  'Hum Rishta was created to make the search for a life partner simple, safe, and aligned with Islamic values. We connect Pakistani families — at home and overseas — through verified profiles and respectful community standards.',
                   style: TextStyle(height: 1.6, color: AppColors.textMuted),
                 ),
               ],
@@ -65,7 +65,7 @@ class AboutScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('How PK Rishta Works', style: Theme.of(context).textTheme.titleLarge),
+                Text('How Hum Rishta Works', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 for (var i = 0; i < aboutSteps.length; i++)
                   Padding(
@@ -107,7 +107,7 @@ class PrivacyScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'PK Rishta is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your information.',
+                  'Hum Rishta is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your information.',
                   style: TextStyle(height: 1.6, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 8),
@@ -135,7 +135,7 @@ class PrivacyScreen extends StatelessWidget {
                       ),
                 ],
                 const SizedBox(height: 16),
-                const Text('Questions? Email info@pkrishta.com', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text('Questions? Email humrishta@gmail.com', style: TextStyle(fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -340,9 +340,9 @@ class _ContactScreenState extends State<ContactScreen> {
             icon: Icons.mail_rounded,
             iconGradient: AppColors.weddingGradient,
             title: 'Email',
-            value: 'info@pkrishta.com',
+            value: 'humrishta@gmail.com',
             hint: 'We reply within 24 hours',
-            onTap: () => _launch('mailto:info@pkrishta.com'),
+            onTap: () => _launch('mailto:humrishta@gmail.com'),
             delay: Duration.zero,
           ),
           const SizedBox(height: 12),
@@ -364,9 +364,9 @@ class _ContactScreenState extends State<ContactScreen> {
               colors: [AppColors.primaryLight, AppColors.gold],
             ),
             title: 'Website',
-            value: 'pkrishta.com',
+            value: 'humrishta.com',
             hint: 'Visit our website',
-            onTap: () => _launch('https://pkrishta.com'),
+            onTap: () => _launch('https://humrishta.com'),
             delay: 180.ms,
           ),
           const SizedBox(height: 22),

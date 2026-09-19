@@ -96,6 +96,30 @@ export class ProfileService {
     return this.http.get<ApiResponse<ContactAccessStatus>>(`${this.apiUrl}/contact-requests/status/${profileId}`);
   }
 
+  shareAddress(profileId: string): Observable<ApiResponse<{
+    i_shared_address: boolean;
+    they_shared_address: boolean;
+    address_visible: boolean;
+  }>> {
+    return this.http.post<ApiResponse<{
+      i_shared_address: boolean;
+      they_shared_address: boolean;
+      address_visible: boolean;
+    }>>(`${this.apiUrl}/address-disclosures/${profileId}`, {});
+  }
+
+  hideAddress(profileId: string): Observable<ApiResponse<{
+    i_shared_address: boolean;
+    they_shared_address: boolean;
+    address_visible: boolean;
+  }>> {
+    return this.http.delete<ApiResponse<{
+      i_shared_address: boolean;
+      they_shared_address: boolean;
+      address_visible: boolean;
+    }>>(`${this.apiUrl}/address-disclosures/${profileId}`);
+  }
+
   submitComplaint(reportedProfileId: string, category: string, description: string): Observable<ApiResponse<Complaint>> {
     return this.http.post<ApiResponse<Complaint>>(`${this.apiUrl}/complaints`, {
       reported_profile_id: reportedProfileId,

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://pkrishta.com/sitemap.xml
+Sitemap: https://humrishta.com/sitemap.xml

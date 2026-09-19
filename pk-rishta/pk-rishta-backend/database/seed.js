@@ -5,12 +5,17 @@ const { importRishtaProfiles } = require('./import-rishta-profiles');
 async function seed() {
   console.log('Seeding database...');
 
-  const adminEmail = 'atif-admin442@pkrishta.com';
+  const adminEmail = 'admin442@humrishta.com';
   const adminPassword = 'ARadmin@442';
   const adminHash = await bcrypt.hash(adminPassword, 12);
 
   const existingAdmin = await pool.query(
-    `SELECT id FROM users WHERE email = 'admin@pkrishta.com' AND role = 'admin'`
+    `SELECT id FROM users WHERE email IN (
+       'admin@pkrishta.com',
+       'atif-admin442@pkrishta.com',
+       'atif-admin442@humrishta.com',
+       'admin442@humrishta.com'
+     ) AND role = 'admin' LIMIT 1`
   );
 
   if (existingAdmin.rows.length) {
@@ -23,8 +28,8 @@ async function seed() {
     await pool.query(
       `INSERT INTO users (email, password_hash, role, is_active, is_verified)
        VALUES ($1, $2, 'admin', true, true)
-       ON CONFLICT (email) DO UPDATE SET
-         password_hash = EXCLUDED.password_hash,
+       ON DUPLICATE KEY UPDATE
+         password_hash = VALUES(password_hash),
          role = 'admin',
          is_active = true,
          is_verified = true,

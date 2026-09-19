@@ -39,6 +39,11 @@ class Profile {
     this.partnerPreferences,
     this.matchScore,
     this.matchReasons,
+    this.pkHouseType,
+    this.abroadHouseType,
+    this.addressVisible = false,
+    this.iSharedAddress = false,
+    this.theySharedAddress = false,
   });
 
   final String id;
@@ -80,6 +85,11 @@ class Profile {
   final PartnerPreferences? partnerPreferences;
   final int? matchScore;
   final List<String>? matchReasons;
+  final String? pkHouseType;
+  final String? abroadHouseType;
+  final bool addressVisible;
+  final bool iSharedAddress;
+  final bool theySharedAddress;
 
   String get fullName => '$firstName $lastName'.trim();
 
@@ -148,6 +158,11 @@ class Profile {
       matchReasons: (json['match_reasons'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList(),
+      pkHouseType: json['pk_house_type'] as String?,
+      abroadHouseType: json['abroad_house_type'] as String?,
+      addressVisible: json['address_visible'] == true,
+      iSharedAddress: json['i_shared_address'] == true,
+      theySharedAddress: json['they_shared_address'] == true,
     );
   }
 }

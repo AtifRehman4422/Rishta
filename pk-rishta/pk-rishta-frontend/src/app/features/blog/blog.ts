@@ -21,7 +21,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
         <div class="hero-badge animate-fade-in-up">
           <span class="pulse-dot"></span> Match & Marriage Insights
         </div>
-        <h1 class="animate-fade-in-up delay-1">PK Rishta <span class="gold">Blog</span></h1>
+        <h1 class="animate-fade-in-up delay-1">Hum Rishta <span class="gold">Blog</span></h1>
         <p class="text-urdu animate-fade-in-up delay-2">شادی اور رشتہ کی رہنمائی</p>
         <p class="hero-sub animate-fade-in-up delay-3">
           Expert guides on finding halal matches, marriage preparation, safety, and Pakistani family traditions.
@@ -289,7 +289,7 @@ export class BlogComponent implements OnInit {
   readonly sparkles = [1, 2, 3, 4, 5];
 
   ngOnInit(): void {
-    this.title.setTitle('Blog — Match & Marriage Guides | PK Rishta');
+    this.title.setTitle('Blog — Match & Marriage Guides | Hum Rishta');
     this.meta.updateTag({
       name: 'description',
       content: 'Read expert articles on finding a match in Pakistan, marriage tips, profile advice, safety, and family traditions.',

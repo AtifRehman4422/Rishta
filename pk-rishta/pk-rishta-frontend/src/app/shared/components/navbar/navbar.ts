@@ -14,7 +14,7 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
       <div class="nav-accent"></div>
       <div class="nav-inner">
         <a routerLink="/" class="logo" (click)="closeMenu()">
-          <img src="/images/logo.png" alt="PK Rishta" class="logo-img" />
+          <img src="/images/logo.png" alt="Hum Rishta" class="logo-img" />
         </a>
         <span class="logo-divider" aria-hidden="true"></span>
 
@@ -204,13 +204,18 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
       line-height: 0;
     }
     .logo-img {
-      height: 72px;
+      height: 92px;
       width: auto;
-      max-width: 250px;
+      max-width: 280px;
       object-fit: contain;
       object-position: left center;
       display: block;
       margin: 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      padding: 0;
       transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .logo:hover .logo-img { transform: scale(1.03); }
@@ -565,7 +570,7 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
     }
 
     @media (max-width: 480px) {
-      .logo-img { height: 56px; max-width: 170px; }
+      .logo-img { height: 72px; width: auto; max-width: 200px; }
       .nav-btn-register { padding: 0.55rem 1rem; font-size: 0.8rem; }
     }
   `],

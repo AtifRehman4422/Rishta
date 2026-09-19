@@ -8,7 +8,7 @@ import { RouterLink } from '@angular/router';
   template: `
     <section class="page-hero bg-page-header">
       <div class="container hero-inner animate-fade-in-up">
-        <h1>About <span class="gold">PK Rishta</span></h1>
+        <h1>About <span class="gold">Hum Rishta</span></h1>
         <p class="text-urdu">ہمارے بارے میں</p>
         <p class="hero-sub">Pakistan's trusted halal matrimonial platform — connecting families with faith, respect, and tradition since 2024.</p>
       </div>
@@ -18,7 +18,7 @@ import { RouterLink } from '@angular/router';
       <section class="content-card card animate-fade-in-up delay-1">
         <h2>Our Mission</h2>
         <p>
-          PK Rishta was created to make the search for a life partner simple, safe, and aligned with Islamic values.
+          Hum Rishta was created to make the search for a life partner simple, safe, and aligned with Islamic values.
           We believe every person deserves a blessed nikah with a compatible partner, and families deserve a platform
           they can trust with their personal information.
         </p>
@@ -39,7 +39,7 @@ import { RouterLink } from '@angular/router';
       </div>
 
       <section class="content-card card animate-fade-in-up delay-3">
-        <h2>How PK Rishta Works</h2>
+        <h2>How Hum Rishta Works</h2>
         <ol class="steps-list">
           <li><strong>Register free</strong> — Create your account and complete your matrimonial profile with education, profession, and family details.</li>
           <li><strong>Search profiles</strong> — Filter by city, province, religion, age, and more across Pakistan and overseas.</li>
@@ -62,7 +62,7 @@ import { RouterLink } from '@angular/router';
 
       <div class="cta-box card animate-fade-in-up delay-5">
         <h3>Start Your Blessed Journey</h3>
-        <p>Join PK Rishta today — registration is completely free.</p>
+        <p>Join Hum Rishta today — registration is completely free.</p>
         <div class="cta-btns">
           <a routerLink="/register" class="btn btn-primary">Register Free</a>
           <a routerLink="/contact" class="btn btn-outline">Contact Us</a>
@@ -106,10 +106,10 @@ export class AboutComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.title.setTitle('About Us | PK Rishta — Pakistan Matrimonial Platform');
+    this.title.setTitle('About Us | Hum Rishta — Pakistan Matrimonial Platform');
     this.meta.updateTag({
       name: 'description',
-      content: 'Learn about PK Rishta — Pakistan\'s trusted halal matrimonial platform for verified matches, family connections, and safe contact sharing.',
+      content: 'Learn about Hum Rishta — Pakistan\'s trusted halal matrimonial platform for verified matches, family connections, and safe contact sharing.',
     });
   }
 }

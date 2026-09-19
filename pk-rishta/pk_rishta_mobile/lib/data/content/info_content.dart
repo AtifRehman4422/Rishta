@@ -39,7 +39,7 @@ const privacySections = [
   ),
   InfoSection(
     title: '2. How We Use Your Information',
-    paragraphs: ['We use collected information to operate and improve PK Rishta:'],
+    paragraphs: ['We use collected information to operate and improve Hum Rishta:'],
     bullets: [
       'Create and manage your matrimonial profile',
       'Process contact requests and admin verification',
@@ -56,7 +56,7 @@ const privacySections = [
   InfoSection(
     title: '4. Data Security & Your Rights',
     paragraphs: [
-      'We use encrypted passwords, HTTPS in production, and access controls. You can update your profile, request account deletion, and contact us at info@pkrishta.com.',
+      'We use encrypted passwords, HTTPS in production, and access controls. You can update your profile, request account deletion, and contact us at humrishta@gmail.com.',
     ],
   ),
 ];
@@ -65,7 +65,7 @@ const termsSections = [
   InfoSection(
     title: '1. Acceptance of Terms',
     paragraphs: [
-      'By using PK Rishta you agree to these Terms of Service and our Privacy Policy. If you do not agree, please do not use the platform.',
+      'By using Hum Rishta you agree to these Terms of Service and our Privacy Policy. If you do not agree, please do not use the platform.',
     ],
   ),
   InfoSection(

@@ -1,17 +1,29 @@
-const fs = require('fs');
-const path = require('path');
 const pool = require('../db');
 const { seedDropdownOptions } = require('./seed-dropdown-options');
 
 async function migrate() {
-  const schemaPath = path.join(__dirname, 'schema.sql');
-  const sql = fs.readFileSync(schemaPath, 'utf8');
+  console.log('Checking MySQL tables...');
+  const tables = await pool.query(
+    `SELECT COUNT(*) AS count
+     FROM information_schema.tables
+     WHERE table_schema = DATABASE() AND table_name = 'users'`
+  );
 
-  console.log('Running database migration...');
-  await pool.query(sql);
-  console.log('Migration completed successfully!');
+  if (!Number(tables.rows[0]?.count)) {
+    console.error('MySQL tables missing. Run the MySQL schema in Workbench first.');
+    process.exit(1);
+  }
 
-  console.log('Seeding dropdown option lists...');
+  try {
+    await pool.query('ALTER TABLE profiles ADD COLUMN languages VARCHAR(200) NULL');
+    console.log('Added profiles.languages');
+  } catch (err) {
+    if (err.errno !== 1060 && !/duplicate column/i.test(err.message || '')) {
+      throw err;
+    }
+  }
+
+  console.log('Tables found. Seeding dropdown option lists...');
   const seed = await seedDropdownOptions();
   console.log(`Dropdown seed: inserted=${seed.inserted}, skipped=${seed.skipped}, total=${seed.total}`);
 

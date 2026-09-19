@@ -39,16 +39,21 @@ async function trackVisit(req, res) {
     // Fallback fingerprint soft-salt (not stored raw) — helps bot noise a bit
     const ipHint = crypto.createHash('sha256').update(getClientIp(req)).digest('hex').slice(0, 8);
 
-    const result = await pool.query(
+    await pool.query(
       `INSERT INTO site_visitors_daily (visit_date, visitor_key, user_id, page_views, last_path)
        VALUES ($1, $2, $3, 1, $4)
-       ON CONFLICT (visit_date, visitor_key) DO UPDATE SET
-         page_views = site_visitors_daily.page_views + 1,
-         last_path = EXCLUDED.last_path,
+       ON DUPLICATE KEY UPDATE
+         page_views = page_views + 1,
+         last_path = VALUES(last_path),
          last_seen_at = NOW(),
-         user_id = COALESCE(EXCLUDED.user_id, site_visitors_daily.user_id)
-       RETURNING visit_date, page_views`,
+         user_id = COALESCE(VALUES(user_id), user_id)`,
       [visitDate, visitorKey, userId, path]
+    );
+    const result = await pool.query(
+      `SELECT visit_date, page_views
+       FROM site_visitors_daily
+       WHERE visit_date = $1 AND visitor_key = $2`,
+      [visitDate, visitorKey]
     );
 
     res.json({

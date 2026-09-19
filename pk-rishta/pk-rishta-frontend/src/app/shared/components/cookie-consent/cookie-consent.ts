@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-const CONSENT_KEY = 'pk-rishta-cookie-consent';
+const CONSENT_KEY = 'hum-rishta-cookie-consent';
 
 @Component({
   selector: 'app-cookie-consent',
@@ -13,7 +13,7 @@ const CONSENT_KEY = 'pk-rishta-cookie-consent';
           <div class="cookie-text">
             <strong>🍪 We use cookies</strong>
             <p>
-              PK Rishta uses cookies to improve your experience and may show ads through Google AdSense.
+              Hum Rishta uses cookies to improve your experience and may show ads through Google AdSense.
               By continuing, you agree to our
               <a routerLink="/privacy" (click)="accept()">Privacy Policy</a>.
             </p>

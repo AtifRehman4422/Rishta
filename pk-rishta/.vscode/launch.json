@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "pk_rishta_mobile",
+            "name": "Hum Rishta mobile",
             "cwd": "pk_rishta_mobile",
             "request": "launch",
             "type": "dart",
@@ -14,14 +14,14 @@
             ]
         },
         {
-            "name": "pk_rishta_mobile (profile mode)",
+            "name": "Hum Rishta mobile (profile mode)",
             "cwd": "pk_rishta_mobile",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "pk_rishta_mobile (release mode)",
+            "name": "Hum Rishta mobile (release mode)",
             "cwd": "pk_rishta_mobile",
             "request": "launch",
             "type": "dart",

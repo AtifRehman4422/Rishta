@@ -30,6 +30,11 @@ export interface Profile {
   abroad_country?: string;
   abroad_house_own_location?: string;
   abroad_house_rent_location?: string;
+  pk_house_type?: 'own' | 'rent' | null;
+  abroad_house_type?: 'own' | 'rent' | null;
+  address_visible?: boolean;
+  i_shared_address?: boolean;
+  they_shared_address?: boolean;
   disability?: string;
   mother_tongue?: string;
   languages?: string;

@@ -6,8 +6,8 @@ import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models';
 
-const VISITOR_KEY = 'pk_rishta_visitor_id';
-const LAST_PING_KEY = 'pk_rishta_visit_ping_at';
+const VISITOR_KEY = 'hum_rishta_visitor_id';
+const LAST_PING_KEY = 'hum_rishta_visit_ping_at';
 
 @Injectable({ providedIn: 'root' })
 export class VisitService {

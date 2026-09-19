@@ -17,7 +17,7 @@ import { RouterLink } from '@angular/router';
     <div class="container page-body">
       <div class="legal-content card animate-fade-in-up delay-1">
         <p class="intro">
-          By accessing or using PK Rishta (pkrishta.com), you agree to these Terms of Service.
+          By accessing or using Hum Rishta (humrishta.com), you agree to these Terms of Service.
           Please read them carefully. If you do not agree, do not use our platform.
         </p>
 
@@ -39,7 +39,7 @@ import { RouterLink } from '@angular/router';
 
         <section class="legal-section contact-section">
           <h2>Contact</h2>
-          <p>Questions about these terms? Email info@pkrishta.com or visit our <a routerLink="/contact">Contact page</a>.</p>
+          <p>Questions about these terms? Email humrishta@gmail.com or visit our <a routerLink="/contact">Contact page</a>.</p>
         </section>
       </div>
     </div>
@@ -68,12 +68,12 @@ export class TermsComponent implements OnInit {
     {
       title: '1. Acceptance of Terms',
       paragraphs: [
-        'These Terms govern your use of PK Rishta, a matrimonial platform for individuals seeking halal marriage in accordance with Islamic values and Pakistani cultural norms.',
+        'These Terms govern your use of Hum Rishta, a matrimonial platform for individuals seeking halal marriage in accordance with Islamic values and Pakistani cultural norms.',
       ],
     },
     {
       title: '2. Eligibility',
-      paragraphs: ['To use PK Rishta, you must:'],
+      paragraphs: ['To use Hum Rishta, you must:'],
       list: [
         'Be at least 18 years of age',
         'Be legally eligible for marriage in your jurisdiction',
@@ -119,20 +119,20 @@ export class TermsComponent implements OnInit {
     {
       title: '7. Intellectual Property',
       paragraphs: [
-        'All content on PK Rishta — including logos, design, text, and software — is owned by PK Rishta or its licensors. You may not copy, reproduce, or distribute platform content without written permission.',
+        'All content on Hum Rishta — including logos, design, text, and software — is owned by Hum Rishta or its licensors. You may not copy, reproduce, or distribute platform content without written permission.',
       ],
     },
     {
       title: '8. Disclaimer',
       paragraphs: [
-        'PK Rishta is a platform that facilitates introductions. We do not guarantee marriage, compatibility, or the accuracy of user-provided information. Users and families are responsible for their own due diligence before any commitment.',
+        'Hum Rishta is a platform that facilitates introductions. We do not guarantee marriage, compatibility, or the accuracy of user-provided information. Users and families are responsible for their own due diligence before any commitment.',
         'The platform is provided "as is" without warranties of any kind.',
       ],
     },
     {
       title: '9. Limitation of Liability',
       paragraphs: [
-        'PK Rishta shall not be liable for any indirect, incidental, or consequential damages arising from use of the platform, interactions with other users, or reliance on profile information.',
+        'Hum Rishta shall not be liable for any indirect, incidental, or consequential damages arising from use of the platform, interactions with other users, or reliance on profile information.',
       ],
     },
     {
@@ -156,10 +156,10 @@ export class TermsComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.title.setTitle('Terms of Service | PK Rishta');
+    this.title.setTitle('Terms of Service | Hum Rishta');
     this.meta.updateTag({
       name: 'description',
-      content: 'PK Rishta Terms of Service — rules and guidelines for using our halal matrimonial platform.',
+      content: 'Hum Rishta Terms of Service — rules and guidelines for using our halal matrimonial platform.',
     });
   }
 }

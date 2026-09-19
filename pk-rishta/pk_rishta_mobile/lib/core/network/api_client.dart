@@ -44,7 +44,7 @@ class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
 
-  static const _tokenKey = 'pk_rishta_token';
+  static const _tokenKey = 'hum_rishta_token';
   String? _token;
 
   Future<void> loadToken() async {

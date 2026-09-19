@@ -172,7 +172,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
     <section class="why-section page-section">
       <div class="container">
         <div class="section-ornament animate-fade-in-up">✦ ❋ ✦</div>
-        <h2 class="section-title text-center animate-fade-in-up">Why Families Trust PK Rishta</h2>
+        <h2 class="section-title text-center animate-fade-in-up">Why Families Trust Hum Rishta</h2>
         <p class="section-subtitle text-center text-urdu">خاندانوں کا اعتماد — ہمارا فخر</p>
         <div class="why-grid">
           @for (item of whyUs; track item.title; let i = $index) {
@@ -265,7 +265,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       <div class="container">
         <div class="section-ornament">✦ 💑 ✦</div>
         <h2 class="section-title text-center" style="color: white">Happy Matches</h2>
-        <p class="section-subtitle text-center" style="color: rgba(255,255,255,0.8)">Couples who started their journey with PK Rishta</p>
+        <p class="section-subtitle text-center" style="color: rgba(255,255,255,0.8)">Couples who started their journey with Hum Rishta</p>
         <div class="testimonial-grid">
           @for (t of testimonials; track t.name; let i = $index) {
             <div class="testimonial-card card animate-fade-in-up" [style.animation-delay]="(i * 0.12) + 's'">
@@ -801,7 +801,7 @@ export class HomeComponent implements OnInit {
   ];
 
   testimonials = [
-    { name: 'Sara & Ali', city: 'Lahore', year: '2025', text: 'We found our match on PK Rishta. The platform is very professional and treats families with respect. Thank you!' },
+    { name: 'Sara & Ali', city: 'Lahore', year: '2025', text: 'We found our match on Hum Rishta. The platform is very professional and treats families with respect. Thank you!' },
     { name: 'Hina Malik', city: 'Karachi', year: '2025', text: 'My daughter found her perfect match here. Verified profiles and strong privacy — I recommend it from the heart.' },
     { name: 'Usman Sheikh', city: 'Islamabad', year: '2024', text: 'I found my match in 2 months. The filters are very helpful and the process was easy.' },
   ];

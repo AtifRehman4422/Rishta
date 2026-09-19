@@ -1,23 +1,23 @@
-# PK Rishta — production reverse proxy with HTTPS
-# Replace yourdomain.com and SSL certificate paths.
+# Hum Rishta — production reverse proxy with HTTPS
+# Replace humrishta.com and SSL certificate paths.
 
-upstream pk_rishta_api {
+upstream hum_rishta_api {
     server 127.0.0.1:3000;
     keepalive 32;
 }
 
 server {
     listen 80;
-    server_name yourdomain.com www.yourdomain.com;
+    server_name humrishta.com www.humrishta.com;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name yourdomain.com www.yourdomain.com;
+    server_name humrishta.com www.humrishta.com;
 
-    ssl_certificate     /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/humrishta.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/humrishta.com/privkey.pem;
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
 
@@ -26,14 +26,14 @@ server {
     add_header X-Frame-Options SAMEORIGIN always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
 
-    root /var/www/pk-rishta/frontend;
+    root /var/www/hum-rishta/frontend;
     index index.html;
 
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml;
 
     location /api/ {
-        proxy_pass http://pk_rishta_api;
+        proxy_pass http://hum_rishta_api;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

@@ -20,9 +20,9 @@ async function getDashboardStats(req, res) {
         (SELECT COUNT(*) FROM complaints WHERE status = 'pending') as pending_complaints,
         (SELECT COUNT(*) FROM contact_form_messages WHERE status = 'new') as new_contact_messages,
         (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days') as new_users_week,
-        (SELECT COUNT(*) FROM site_visitors_daily WHERE visit_date = $1::date) as visitors_today,
-        (SELECT COALESCE(SUM(page_views), 0) FROM site_visitors_daily WHERE visit_date = $1::date) as page_views_today,
-        (SELECT COUNT(*) FROM site_visitors_daily WHERE visit_date = ($1::date - INTERVAL '1 day')) as visitors_yesterday
+        (SELECT COUNT(*) FROM site_visitors_daily WHERE visit_date = $1) as visitors_today,
+        (SELECT COALESCE(SUM(page_views), 0) FROM site_visitors_daily WHERE visit_date = $1) as page_views_today,
+        (SELECT COUNT(*) FROM site_visitors_daily WHERE visit_date = DATE_SUB($1, INTERVAL 1 DAY)) as visitors_yesterday
     `, [today]);
     res.json({ success: true, data: { ...result.rows[0], visit_date: today } });
   } catch (err) {
@@ -332,14 +332,12 @@ async function getContactRequests(req, res) {
               rp.first_name AS requester_first_name, rp.last_name AS requester_last_name,
               rp.city AS requester_city, rp.gender AS requester_gender,
               EXTRACT(YEAR FROM AGE(rp.date_of_birth))::int AS requester_age,
-              (SELECT COALESCE(json_agg(json_build_object('type', pc.contact_type, 'number', pc.number)
-                ORDER BY pc.sort_order, pc.created_at), '[]'::json)
+              (SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('type', pc.contact_type, 'number', pc.number)), JSON_ARRAY())
                FROM profile_contacts pc WHERE pc.profile_id = car.requester_profile_id) AS requester_contacts,
               tp.first_name AS target_first_name, tp.last_name AS target_last_name,
               tp.city AS target_city, tp.gender AS target_gender,
               EXTRACT(YEAR FROM AGE(tp.date_of_birth))::int AS target_age,
-              (SELECT COALESCE(json_agg(json_build_object('type', pc.contact_type, 'number', pc.number)
-                ORDER BY pc.sort_order, pc.created_at), '[]'::json)
+              (SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('type', pc.contact_type, 'number', pc.number)), JSON_ARRAY())
                FROM profile_contacts pc WHERE pc.profile_id = car.target_profile_id) AS target_contacts
        FROM contact_access_requests car
        JOIN profiles rp ON rp.id = car.requester_profile_id
@@ -547,10 +545,10 @@ async function sendComplaintMessage(req, res) {
     await createNotification({
       userId: targetUserId,
       type: 'complaint_message',
-      title: 'Message from PK Rishta Admin',
+      title: 'Message from Hum Rishta Admin',
       body: recipientRole === 'reporter'
         ? 'Admin replied to your complaint. Open My Activity to continue the chat.'
-        : 'PK Rishta Admin sent you a private message. Open My Activity to reply.',
+        : 'Hum Rishta Admin sent you a private message. Open My Activity to reply.',
       link: '/dashboard',
       relatedId: id,
     });
@@ -680,14 +678,14 @@ async function replyContactFormMessage(req, res) {
     const subjectLabel = row.subject || 'your message';
     await sendMail({
       to: row.email,
-      subject: `Re: ${subjectLabel} — PK Rishta`,
-      text: `Dear ${row.name},\n\n${body}\n\n— PK Rishta Admin\nhttps://pkrishta.com`,
+      subject: `Re: ${subjectLabel} — Hum Rishta`,
+      text: `Dear ${row.name},\n\n${body}\n\n— Hum Rishta Admin\nhttps://humrishta.com`,
       html: `
         <div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#fff8f3;border:1px solid #f0ddd0;border-radius:16px;">
-          <h2 style="color:#9B1B30;margin:0 0 12px;">PK Rishta</h2>
+          <h2 style="color:#9B1B30;margin:0 0 12px;">Hum Rishta</h2>
           <p style="color:#2D1B1B;">Dear ${row.name},</p>
           <p style="color:#2D1B1B;white-space:pre-wrap;line-height:1.6;">${body.replace(/</g, '&lt;')}</p>
-          <p style="color:#7A6363;margin-top:24px;">— PK Rishta Admin</p>
+          <p style="color:#7A6363;margin-top:24px;">— Hum Rishta Admin</p>
         </div>
       `,
     });

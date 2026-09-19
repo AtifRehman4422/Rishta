@@ -58,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const BrandLogo(height: 240, animated: true, heroTag: 'pk-logo')
+                const BrandLogo(height: 240, animated: true, heroTag: 'hum-logo')
                     .animate()
                     .fadeIn(duration: 500.ms)
                     .scale(

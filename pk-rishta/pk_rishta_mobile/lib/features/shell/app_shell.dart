@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/ads/ads_controller.dart';
+import '../../core/ads/anchored_banner_ad.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/state/favorites_controller.dart';
 import '../../core/state/shell_navigator.dart';
@@ -145,18 +147,31 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 10 + (bottomInset > 0 ? 2 : 0)),
-          child: _AtelierBottomNav(
-            index: _index,
-            onTap: _setTab,
-          )
-              .animate()
-              .fadeIn(duration: 450.ms, curve: Curves.easeOut)
-              .slideY(begin: 0.25, end: 0, duration: 550.ms, curve: Curves.easeOutCubic),
-        ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListenableBuilder(
+            listenable: AdsController.instance,
+            builder: (context, _) {
+              final showBanner = (_index == 0 || _index == 1) && AdsController.instance.canShowAds;
+              if (!showBanner) return const SizedBox.shrink();
+              return const AnchoredBannerAd();
+            },
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 10 + (bottomInset > 0 ? 2 : 0)),
+              child: _AtelierBottomNav(
+                index: _index,
+                onTap: _setTab,
+              )
+                  .animate()
+                  .fadeIn(duration: 450.ms, curve: Curves.easeOut)
+                  .slideY(begin: 0.25, end: 0, duration: 550.ms, curve: Curves.easeOutCubic),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -200,6 +200,22 @@ async function createContactRequest(req, res) {
       return res.status(409).json({ success: false, message: 'You already have a pending request for this profile' });
     }
 
+    const rejectedBlock = await pool.query(
+      `SELECT id FROM contact_access_requests
+       WHERE requester_profile_id = $1 AND target_profile_id = $2
+         AND status = 'rejected'
+         AND COALESCE(response_source, 'admin') IN ('target', 'admin')
+       ORDER BY created_at DESC LIMIT 1`,
+      [requesterId, target_profile_id]
+    );
+    if (rejectedBlock.rows.length) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your previous contact request was declined. You cannot send another request to this profile.',
+        code: 'REQUEST_REJECTED_PERMANENT',
+      });
+    }
+
     const activeGrant = await pool.query(
       `SELECT id FROM contact_access_requests
        WHERE requester_profile_id = $1 AND target_profile_id = $2
@@ -476,7 +492,22 @@ async function getContactAccessStatus(req, res) {
 
     const request = result.rows[0];
 
-    if (request.status === 'rejected' || request.status === 'expired') {
+    if (request.status === 'rejected') {
+      const source = request.response_source || 'admin';
+      const permanentlyBlocked = source === 'target' || source === 'admin';
+      return res.json({
+        success: true,
+        data: {
+          status: permanentlyBlocked ? 'rejected' : 'none',
+          can_request_again: !permanentlyBlocked,
+          last_status: 'rejected',
+          admin_message: request.admin_message,
+          ...quota,
+        },
+      });
+    }
+
+    if (request.status === 'expired') {
       return res.json({
         success: true,
         data: {

@@ -12,6 +12,7 @@ const {
   secondsUntilResend,
   OTP_RESEND_SECONDS,
 } = require('../utils/otp');
+const { createCaptchaChallenge, verifyCaptcha } = require('../utils/captcha');
 
 function splitFullName(fullName) {
   const cleaned = String(fullName || '').trim().replace(/\s+/g, ' ');
@@ -435,9 +436,26 @@ async function resetPassword(req, res) {
   }
 }
 
+function getCaptcha(req, res) {
+  try {
+    const challenge = createCaptchaChallenge();
+    res.json({ success: true, data: challenge });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: isProduction ? 'Could not create security check' : err.message,
+    });
+  }
+}
+
 async function login(req, res) {
   try {
-    const { email, password } = req.body;
+    const { email, password, captcha_token: captchaToken, captcha_answer: captchaAnswer } = req.body;
+    const captcha = verifyCaptcha(captchaToken, captchaAnswer);
+    if (!captcha.ok) {
+      return res.status(400).json({ success: false, message: captcha.message, code: 'CAPTCHA_FAILED' });
+    }
+
     const emailValue = String(email || '').toLowerCase().trim();
     if (!emailValue || !password) {
       return res.status(400).json({ success: false, message: 'Email and password required' });
@@ -553,6 +571,7 @@ module.exports = {
   resendOtp,
   forgotPassword,
   resetPassword,
+  getCaptcha,
   login,
   getMe,
 };

@@ -28,24 +28,24 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
               [class.active]="isSearchNavActive()"
               (click)="closeMenu()"
             >Search</a>
-            <a routerLink="/blog" routerLinkActive="active" (click)="closeMenu()">Blog</a>
-            <a routerLink="/about" routerLinkActive="active" (click)="closeMenu()">About</a>
-            <a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a>
             @if (auth.isLoggedIn() && !auth.isAdmin()) {
-              <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">My Activity</a>
-              <a routerLink="/favorites" routerLinkActive="active" (click)="closeMenu()">Favorites</a>
               @if (auth.currentUser()?.is_profile_complete) {
-                <a routerLink="/my-profile" routerLinkActive="active" (click)="closeMenu()">My Profile</a>
                 <a
                   routerLink="/search"
                   [queryParams]="{ matching: 'true' }"
                   [class.active]="isMatchingNavActive()"
                   (click)="closeMenu()"
-                >Matching Profiles</a>
-              } @else {
+                >AI Matching Profiles</a>
+              }
+              <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">My Activity</a>
+              <a routerLink="/favorites" routerLinkActive="active" (click)="closeMenu()">Favorites</a>
+              @if (!auth.currentUser()?.is_profile_complete) {
                 <a routerLink="/my-profile" class="complete-profile-link" (click)="closeMenu()">Complete Your Profile</a>
               }
             }
+            <a routerLink="/blog" routerLinkActive="active" (click)="closeMenu()">Blog</a>
+            <a routerLink="/about" routerLinkActive="active" (click)="closeMenu()">About</a>
+            <a routerLink="/contact" routerLinkActive="active" (click)="closeMenu()">Contact</a>
             @if (auth.isAdmin()) {
               <a routerLink="/admin" routerLinkActive="active" (click)="closeMenu()">Admin</a>
             }
@@ -101,22 +101,36 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
               <a routerLink="/login" class="nav-btn nav-btn-login" (click)="closeMenu()">Login</a>
               <a routerLink="/register" class="nav-btn nav-btn-register" (click)="closeMenu()">Register Free</a>
             } @else {
-              <div class="user-chip">
-                <app-profile-avatar
-                  [photo]="auth.currentUser()?.profile_photo"
-                  [gender]="auth.currentUser()?.gender"
-                  [firstName]="auth.currentUser()?.first_name"
-                  [lastName]="auth.currentUser()?.last_name"
-                  size="xs"
-                />
-                <span class="user-name">
-                  @if (auth.isAdmin()) {
-                    {{ auth.currentUser()?.email }}
-                  } @else {
+              @if (auth.isAdmin()) {
+                <div class="user-chip user-chip-static">
+                  <app-profile-avatar
+                    [photo]="auth.currentUser()?.profile_photo"
+                    [gender]="auth.currentUser()?.gender"
+                    [firstName]="auth.currentUser()?.first_name"
+                    [lastName]="auth.currentUser()?.last_name"
+                    size="xs"
+                  />
+                  <span class="user-name">{{ auth.currentUser()?.email }}</span>
+                </div>
+              } @else {
+                <a
+                  routerLink="/my-profile"
+                  class="user-chip"
+                  title="My Profile"
+                  (click)="closeMenu()"
+                >
+                  <app-profile-avatar
+                    [photo]="auth.currentUser()?.profile_photo"
+                    [gender]="auth.currentUser()?.gender"
+                    [firstName]="auth.currentUser()?.first_name"
+                    [lastName]="auth.currentUser()?.last_name"
+                    size="xs"
+                  />
+                  <span class="user-name">
                     {{ auth.currentUser()?.first_name || (auth.currentUser()?.email ?? '').split('@')[0] }}
-                  }
-                </span>
-              </div>
+                  </span>
+                </a>
+              }
               <button class="nav-btn nav-btn-logout" (click)="auth.logout()">Logout</button>
             }
             <button class="menu-toggle" [class.open]="menuOpen" (click)="menuOpen = !menuOpen" aria-label="Menu">
@@ -469,7 +483,16 @@ import { ProfileAvatarComponent } from '../profile-avatar/profile-avatar';
       border: 1px solid rgba(212, 175, 55, 0.35);
       border-radius: 8px;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
     }
+    a.user-chip:hover {
+      background: rgba(212, 175, 55, 0.18);
+      border-color: #D4AF37;
+      transform: translateY(-1px);
+    }
+    .user-chip-static { cursor: default; }
     .user-chip .avatar { box-shadow: none; }
     .user-name {
       font-size: 0.85rem;

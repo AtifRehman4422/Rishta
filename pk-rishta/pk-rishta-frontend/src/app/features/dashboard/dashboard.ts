@@ -7,6 +7,7 @@ import { Complaint, ContactAccessRequest } from '../../core/models';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ProfileAvatarComponent } from '../../shared/components/profile-avatar/profile-avatar';
+import { GuidePopupComponent } from '../../shared/components/guide-popup/guide-popup';
 
 type RequestTab = 'all' | 'pending' | 'approved' | 'rejected';
 type ContactView = 'sent' | 'received';
@@ -15,8 +16,16 @@ type MainSection = 'contact' | 'complaints';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, FormsModule, ProfileAvatarComponent, NgTemplateOutlet],
+  imports: [RouterLink, FormsModule, ProfileAvatarComponent, NgTemplateOutlet, GuidePopupComponent],
   template: `
+    <app-guide-popup
+      [open]="showAcceptGuide()"
+      variant="contact-request"
+      cancelLabel="Not now"
+      confirmLabel="Accept — قبول کریں"
+      (closed)="cancelAcceptGuide()"
+      (confirmed)="confirmAcceptIncoming()"
+    />
     <div class="bg-page-header">
       <div class="container">
         <h1 class="animate-fade-in-up">My Activity</h1>
@@ -131,7 +140,7 @@ type MainSection = 'contact' | 'complaints';
                             type="button"
                             class="btn btn-primary btn-sm"
                             [disabled]="respondingId() === item.id"
-                            (click)="respondIncoming(item.id, 'approve')"
+                            (click)="openAcceptGuide(item.id)"
                           >Accept</button>
                           <button
                             type="button"
@@ -680,6 +689,8 @@ export class DashboardComponent implements OnInit {
   respondingId = signal<string | null>(null);
   declineId = signal<string | null>(null);
   cancellingId = signal<string | null>(null);
+  showAcceptGuide = signal(false);
+  pendingAcceptId = signal<string | null>(null);
   declineReason = '';
   complaintMessage = signal('');
   complaintError = signal(false);
@@ -753,6 +764,24 @@ export class DashboardComponent implements OnInit {
   startDecline(id: string): void {
     this.declineId.set(id);
     this.declineReason = '';
+  }
+
+  openAcceptGuide(id: string): void {
+    this.pendingAcceptId.set(id);
+    this.showAcceptGuide.set(true);
+  }
+
+  cancelAcceptGuide(): void {
+    this.showAcceptGuide.set(false);
+    this.pendingAcceptId.set(null);
+  }
+
+  confirmAcceptIncoming(): void {
+    const id = this.pendingAcceptId();
+    this.showAcceptGuide.set(false);
+    this.pendingAcceptId.set(null);
+    if (!id) return;
+    this.respondIncoming(id, 'approve');
   }
 
   confirmDecline(id: string): void {

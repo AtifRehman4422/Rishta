@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'core/ads/ads_controller.dart';
 import 'core/config/api_config.dart';
 import 'core/state/auth_controller.dart';
 import 'core/state/notification_controller.dart';
@@ -12,6 +15,7 @@ Future<void> main() async {
   await AuthController.instance.bootstrap();
   await NotificationController.instance.bootstrap();
   runApp(const HumRishtaApp());
+  unawaited(AdsController.instance.init());
 }
 
 class HumRishtaApp extends StatelessWidget {

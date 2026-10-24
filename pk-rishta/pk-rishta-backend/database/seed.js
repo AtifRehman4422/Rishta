@@ -40,6 +40,7 @@ async function seed() {
   console.log(`Admin user ready: ${adminEmail} / ${adminPassword}`);
 
   await importRishtaProfiles();
+
   process.exit(0);
 }
 

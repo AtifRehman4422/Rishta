@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { Title, Meta } from '@angular/platform-browser';
+import { SeoService } from '../../core/services/seo.service';
 import { RouterLink } from '@angular/router';
 
 import { BLOG_POSTS } from '../../core/constants/blog-posts';
@@ -279,8 +279,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
   `],
 })
 export class BlogComponent implements OnInit {
-  private readonly title = inject(Title);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
 
   readonly adSlots = ADSENSE_SLOTS;
   readonly posts = BLOG_POSTS;
@@ -289,10 +288,13 @@ export class BlogComponent implements OnInit {
   readonly sparkles = [1, 2, 3, 4, 5];
 
   ngOnInit(): void {
-    this.title.setTitle('Blog — Match & Marriage Guides | Hum Rishta');
-    this.meta.updateTag({
-      name: 'description',
-      content: 'Read expert articles on finding a match in Pakistan, marriage tips, profile advice, safety, and family traditions.',
+    this.seo.apply({
+      title: 'Rishta & Marriage Guides Blog',
+      description:
+        'Expert guides on finding a rishta in Pakistan, matrimonial website tips, marriage preparation, safety, and family traditions — Hum Rishta Blog.',
+      path: '/blog',
+      keywords:
+        'rishta guide, matrimonial tips Pakistan, marriage advice, online rishta blog, Hum Rishta',
     });
   }
 

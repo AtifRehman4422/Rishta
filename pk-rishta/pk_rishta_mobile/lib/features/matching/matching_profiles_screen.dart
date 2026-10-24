@@ -126,7 +126,7 @@ class _MatchingProfilesScreenState extends State<MatchingProfilesScreen> {
             foregroundColor: Colors.white,
             systemOverlayStyle: SystemUiOverlayStyle.light,
             flexibleSpace: FlexibleSpaceBar(
-              title: const Text('Matching Profiles', style: TextStyle(fontSize: 16)),
+              title: const Text('AI Matching Profiles', style: TextStyle(fontSize: 16)),
               background: Container(
                 decoration: const BoxDecoration(gradient: AppColors.weddingGradient),
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 42),

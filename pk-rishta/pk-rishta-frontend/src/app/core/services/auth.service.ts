@@ -60,10 +60,26 @@ export class AuthService {
       .pipe(tap((res) => this.handleAuth(res)));
   }
 
-  login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/auth/login`, { email, password }).pipe(
-      tap((res) => this.handleAuth(res))
+  getCaptcha(): Observable<ApiResponse<{ captcha_token: string; question: string; expires_in: number }>> {
+    return this.http.get<ApiResponse<{ captcha_token: string; question: string; expires_in: number }>>(
+      `${this.baseUrl}/auth/captcha`
     );
+  }
+
+  login(
+    email: string,
+    password: string,
+    captchaToken: string,
+    captchaAnswer: string
+  ): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.baseUrl}/auth/login`, {
+        email,
+        password,
+        captcha_token: captchaToken,
+        captcha_answer: captchaAnswer,
+      })
+      .pipe(tap((res) => this.handleAuth(res)));
   }
 
   getMe(): Observable<ApiResponse<User>> {

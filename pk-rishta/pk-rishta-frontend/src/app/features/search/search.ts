@@ -5,9 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { Profile } from '../../core/models';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
+import { VisitService } from '../../core/services/visit.service';
+import { SeoService } from '../../core/services/seo.service';
 import { ProfileCardComponent } from '../../shared/components/profile-card/profile-card';
 import { AdSlotComponent } from '../../shared/components/ad-slot/ad-slot';
-import { ADSENSE_SLOTS } from '../../core/constants/adsense';
+import { ADSENSE_SLOTS, isAdSenseReady } from '../../core/constants/adsense';
 import {
   ALL_LOCATION_PROVINCES,
   OVERSEAS_COUNTRIES,
@@ -36,8 +38,8 @@ interface SearchFilters {
   template: `
     <div class="bg-page-header">
       <div class="container">
-        <h1 class="animate-fade-in-up">{{ matchingMode() ? 'Matching Profiles' : 'Search Profiles' }}</h1>
-        <p class="text-urdu animate-fade-in-up delay-1">{{ matchingMode() ? 'آپ کے لیے موزوں رشتے' : 'پروفائلز تلاش کریں' }}</p>
+        <h1 class="animate-fade-in-up">{{ matchingMode() ? 'AI Matching Profiles' : 'Search Rishta Profiles' }}</h1>
+        <p class="text-urdu animate-fade-in-up delay-1">{{ matchingMode() ? 'آپ کے لیے موزوں رشتے' : 'پاکستان میں رشتہ تلاش کریں' }}</p>
       </div>
     </div>
 
@@ -146,13 +148,19 @@ interface SearchFilters {
         </div>
       }
 
-      <!-- Left ad | Results | Right ad -->
-      <div class="search-layout" [class.matching-layout]="matchingMode()">
-        <aside class="ad-rail ad-left">
-          <div class="ad-sticky">
-            <app-ad-slot [slot]="slots.searchLeft" format="vertical" />
-          </div>
-        </aside>
+      <!-- Left ad | Results | Right ad (ads only when AdSense is ready) -->
+      <div
+        class="search-layout"
+        [class.matching-layout]="matchingMode()"
+        [class.has-ads]="adsReady"
+      >
+        @if (adsReady) {
+          <aside class="ad-rail ad-left">
+            <div class="ad-sticky">
+              <app-ad-slot [slot]="slots.searchLeft" format="vertical" />
+            </div>
+          </aside>
+        }
 
         <div class="results">
           @if (!canViewProfiles) {
@@ -183,7 +191,7 @@ interface SearchFilters {
               <p>{{ matchingMode() ? 'No matching profiles right now — check back later' : 'Try adjusting your filters' }}</p>
             </div>
           } @else if (canViewProfiles && profiles().length) {
-            <div class="grid-2">
+            <div class="grid-3 profiles-grid">
               @for (profile of profiles(); track profile.id; let i = $index) {
                 <app-profile-card [profile]="profile" [delay]="(i * 0.05) + 's'" />
               }
@@ -195,17 +203,21 @@ interface SearchFilters {
                 <button class="btn btn-outline btn-sm" [disabled]="page() >= totalPages()" (click)="goPage(page() + 1)">Next →</button>
               </div>
             }
-            <div class="ad-mobile-bottom">
-              <app-ad-slot [slot]="slots.searchLeft" format="horizontal" />
-            </div>
+            @if (adsReady) {
+              <div class="ad-mobile-bottom">
+                <app-ad-slot [slot]="slots.searchLeft" format="horizontal" />
+              </div>
+            }
           }
         </div>
 
-        <aside class="ad-rail ad-right">
-          <div class="ad-sticky">
-            <app-ad-slot [slot]="slots.searchRight" format="vertical" />
-          </div>
-        </aside>
+        @if (adsReady) {
+          <aside class="ad-rail ad-right">
+            <div class="ad-sticky">
+              <app-ad-slot [slot]="slots.searchRight" format="vertical" />
+            </div>
+          </aside>
+        }
       </div>
     </div>
   `,
@@ -238,9 +250,13 @@ interface SearchFilters {
 
     .search-layout {
       display: grid;
-      grid-template-columns: 160px 1fr 160px;
+      grid-template-columns: 1fr;
       gap: 1.25rem;
       align-items: start;
+      width: 100%;
+    }
+    .search-layout.has-ads {
+      grid-template-columns: 160px minmax(0, 1fr) 160px;
     }
     .search-layout.matching-layout {
       margin-top: 0.5rem;
@@ -252,9 +268,13 @@ interface SearchFilters {
       position: sticky;
       top: 90px;
     }
+    .profiles-grid {
+      width: 100%;
+      align-items: stretch;
+    }
     .empty-state { text-align: center; padding: 4rem 2rem; }
     .empty-state h3 { margin: 1rem 0 0.5rem; }
-    .results { position: relative; min-height: 240px; }
+    .results { position: relative; min-height: 240px; width: 100%; min-width: 0; }
     .access-overlay {
       position: relative;
       z-index: 5;
@@ -279,10 +299,11 @@ interface SearchFilters {
 
     @media (max-width: 1100px) {
       .filters-grid { grid-template-columns: repeat(3, 1fr); }
-      .search-layout { grid-template-columns: 140px 1fr 140px; }
+      .search-layout.has-ads { grid-template-columns: 140px minmax(0, 1fr) 140px; }
     }
     @media (max-width: 900px) {
-      .search-layout { grid-template-columns: 1fr; }
+      .search-layout,
+      .search-layout.has-ads { grid-template-columns: 1fr; }
       .ad-rail { display: none; }
       .ad-mobile-bottom { display: block; }
     }
@@ -295,9 +316,12 @@ interface SearchFilters {
 export class SearchComponent implements OnInit {
   private readonly profileService = inject(ProfileService);
   private readonly route = inject(ActivatedRoute);
+  private readonly visitService = inject(VisitService);
+  private readonly seo = inject(SeoService);
   readonly auth = inject(AuthService);
 
   readonly slots = ADSENSE_SLOTS;
+  readonly adsReady = isAdSenseReady();
   profiles = signal<Profile[]>([]);
   loading = signal(false);
   page = signal(1);
@@ -354,6 +378,7 @@ export class SearchComponent implements OnInit {
       if (params['province']) this.filters.province = params['province'];
       if (params['country']) this.filters.country = params['country'];
       this.page.set(1);
+      this.applySearchSeo();
 
       if (this.auth.isLoggedIn() && !this.auth.isAdmin()) {
         this.auth.getMe().subscribe({
@@ -376,6 +401,26 @@ export class SearchComponent implements OnInit {
     if (gender === 'female') this.filters.gender = 'male';
   }
 
+  private applySearchSeo(): void {
+    if (this.matchingMode()) {
+      this.seo.apply({
+        title: 'AI Matching Profiles — Find Compatible Rishta Matches',
+        description:
+          'View AI matching profiles on Hum Rishta based on your preferences. Discover compatible rishta matches on Pakistan\'s trusted matrimonial website.',
+        path: '/search?matching=true',
+      });
+      return;
+    }
+    this.seo.apply({
+      title: 'Search Rishta Profiles — Online Matrimonial Website Pakistan',
+      description:
+        'Search rishta profiles by city, education, and preferences on Hum Rishta — Pakistan\'s trusted online matrimonial and rishta website.',
+      path: '/search',
+      keywords:
+        'search rishta, rishta profiles Pakistan, matrimonial search, online rishta, Hum Rishta',
+    });
+  }
+
   search(): void {
     if (!this.canViewProfiles) {
       this.profiles.set([]);
@@ -393,6 +438,15 @@ export class SearchComponent implements OnInit {
         this.profiles.set(res.data);
         this.totalPages.set(res.pagination?.totalPages ?? 1);
         this.loading.set(false);
+        this.visitService.trackSearch(
+          {
+            ...this.filters,
+            matching: this.matchingMode(),
+            page: this.page(),
+          },
+          res.data?.length ?? 0,
+          this.matchingMode() ? '/search?matching=true' : '/search'
+        );
       },
       error: (err) => {
         this.loading.set(false);

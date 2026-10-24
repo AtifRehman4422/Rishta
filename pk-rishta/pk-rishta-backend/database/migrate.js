@@ -27,6 +27,24 @@ async function migrate() {
   const seed = await seedDropdownOptions();
   console.log(`Dropdown seed: inserted=${seed.inserted}, skipped=${seed.skipped}, total=${seed.total}`);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_activity_events (
+      id CHAR(36) NOT NULL PRIMARY KEY,
+      visitor_key VARCHAR(64) NOT NULL,
+      user_id CHAR(36) NULL,
+      event_type VARCHAR(30) NOT NULL,
+      payload JSON NULL,
+      path VARCHAR(200) NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_activity_visitor_created (visitor_key, created_at),
+      KEY idx_activity_user_created (user_id, created_at),
+      KEY idx_activity_type_created (event_type, created_at),
+      KEY idx_activity_created (created_at),
+      CONSTRAINT fk_activity_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('Ensured user_activity_events table');
+
   process.exit(0);
 }
 

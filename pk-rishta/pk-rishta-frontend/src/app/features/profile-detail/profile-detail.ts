@@ -14,6 +14,8 @@ import { FormErrorState } from '../../core/utils/form-error-state';
 import { firstError, validateComplaint } from '../../core/utils/validation';
 import { FieldErrorComponent } from '../../shared/components/field-error/field-error';
 import { AdSlotComponent } from '../../shared/components/ad-slot/ad-slot';
+import { GuidePopupComponent } from '../../shared/components/guide-popup/guide-popup';
+import { VisitService } from '../../core/services/visit.service';
 import { ADSENSE_SLOTS } from '../../core/constants/adsense';
 import {
   aliveLabel,
@@ -29,8 +31,16 @@ import {
 
 @Component({
   selector: 'app-profile-detail',
-  imports: [RouterLink, FormsModule, ProfileAvatarComponent, FieldErrorComponent, AdSlotComponent],
+  imports: [RouterLink, FormsModule, ProfileAvatarComponent, FieldErrorComponent, AdSlotComponent, GuidePopupComponent],
   template: `
+    <app-guide-popup
+      [open]="showRequestGuide()"
+      variant="contact-request"
+      cancelLabel="Not now"
+      confirmLabel="Send request — درخواست بھیجیں"
+      (closed)="showRequestGuide.set(false)"
+      (confirmed)="confirmRequestContact()"
+    />
     @if (loading()) {
       <div class="loading-center"><div class="spinner"></div></div>
     } @else if (!canViewThisProfile) {
@@ -169,7 +179,7 @@ import {
                   <p class="quota-hint">{{ pendingRemaining() }} of {{ pendingLimit() }} pending request slots remaining. Unanswered requests expire after 2 days.</p>
                 }
               </div>
-              <button class="btn btn-primary btn-lg" (click)="requestContact()" [disabled]="requesting()">
+              <button class="btn btn-primary btn-lg" (click)="openRequestGuide()" [disabled]="requesting()">
                 {{ requesting() ? 'Sending Request...' : '📞 Request Contact Number' }}
               </button>
             </div>
@@ -209,7 +219,7 @@ import {
               @if (accessStatus()!.admin_message) {
                 <p><strong>Reason:</strong> {{ accessStatus()!.admin_message }}</p>
               }
-              <p class="process-hint">You can request contact from another profile.</p>
+              <p class="process-hint">This profile declined your request. You cannot send another contact request to them. You can still request contact from other profiles.</p>
             </div>
           }
 
@@ -749,6 +759,7 @@ export class ProfileDetailComponent implements OnInit {
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
+  private readonly visitService = inject(VisitService);
   readonly favorites = inject(FavoritesService);
   readonly adSlots = ADSENSE_SLOTS;
   readonly formatHeightCm = formatHeightCm;
@@ -767,6 +778,7 @@ export class ProfileDetailComponent implements OnInit {
   accessStatus = signal<ContactAccessStatus | null>(null);
   loading = signal(true);
   requesting = signal(false);
+  showRequestGuide = signal(false);
   message = signal('');
   messageType = signal<'success' | 'error' | 'info'>('success');
   showComplaintModal = signal(false);
@@ -795,6 +807,9 @@ export class ProfileDetailComponent implements OnInit {
         this.profile.set(res.data);
         this.requestLimitDraft = res.data.contact_request_limit || 3;
         this.loading.set(false);
+        if (!this.auth.isAdmin() && this.auth.currentUser()?.profile_id !== id) {
+          this.visitService.trackProfileView(res.data);
+        }
         if (this.auth.isLoggedIn() && !this.auth.isAdmin()) {
           this.loadAccessStatus(id);
         }
@@ -968,6 +983,19 @@ export class ProfileDetailComponent implements OnInit {
         this.messageType.set('error');
       },
     });
+  }
+
+  openRequestGuide(): void {
+    if (!this.auth.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.showRequestGuide.set(true);
+  }
+
+  confirmRequestContact(): void {
+    this.showRequestGuide.set(false);
+    this.requestContact();
   }
 
   requestContact(): void {

@@ -1,15 +1,17 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { FormErrorState } from '../../core/utils/form-error-state';
 import { firstError, validateContactForm } from '../../core/utils/validation';
 import { FieldErrorComponent } from '../../shared/components/field-error/field-error';
+import { SocialLinksComponent } from '../../shared/components/social-links/social-links';
 import { ContactService } from '../../core/services/contact.service';
+import { SeoService } from '../../core/services/seo.service';
 
 @Component({
   selector: 'app-contact',
-  imports: [FormsModule, RouterLink, FieldErrorComponent],
+  imports: [FormsModule, RouterLink, FieldErrorComponent, SocialLinksComponent],
   template: `
     <section class="contact-hero bg-page-header">
       <div class="hero-glow"></div>
@@ -50,6 +52,10 @@ import { ContactService } from '../../core/services/contact.service';
             <span class="info-arrow">→</span>
           </a>
         }
+      </div>
+
+      <div class="social-section card animate-fade-in-up delay-2">
+        <app-social-links title="Follow Hum Rishta on social" />
       </div>
 
       <div class="form-section">
@@ -234,6 +240,13 @@ import { ContactService } from '../../core/services/contact.service';
 
     .contact-body { padding: 3rem 0 4rem; margin-top: -1.5rem; position: relative; z-index: 2; }
 
+    .social-section {
+      padding: 1.5rem 1.25rem;
+      margin-bottom: 2.5rem;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,248,240,0.9));
+    }
+
     .info-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -387,10 +400,20 @@ import { ContactService } from '../../core/services/contact.service';
     }
   `],
 })
-export class ContactComponent {
+export class ContactComponent implements OnInit {
   private readonly contactService = inject(ContactService);
+  private readonly seo = inject(SeoService);
 
   readonly particles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+  ngOnInit(): void {
+    this.seo.apply({
+      title: 'Contact Hum Rishta — Rishta & Matrimonial Support',
+      description:
+        'Contact Hum Rishta for help with registration, profiles, or rishta requests. Pakistan\'s trusted matrimonial website support team.',
+      path: '/contact',
+    });
+  }
 
   contactCards = [
     {
@@ -403,21 +426,21 @@ export class ContactComponent {
       external: false,
     },
     {
-      icon: '📞',
-      title: 'Call / WhatsApp',
-      value: '+92 300 1234567',
+      icon: '💬',
+      title: 'WhatsApp Chat',
+      value: '+92 343 5020077',
       hint: 'Mon–Sat, 9 AM – 6 PM',
-      href: 'https://wa.me/923001234567',
+      href: 'https://wa.me/923435020077',
       color: '#25D366',
       external: true,
     },
     {
-      icon: '📍',
-      title: 'Office',
-      value: 'Lahore, Pakistan',
-      hint: 'Punjab — by appointment',
-      href: 'https://maps.google.com/?q=Lahore,Pakistan',
-      color: '#D4AF37',
+      icon: '📢',
+      title: 'WhatsApp Channel',
+      value: 'Follow HumRishta',
+      hint: 'Updates · rishtay · announcements',
+      href: 'https://whatsapp.com/channel/0029VbELMHi4SpkEkfsXeZ3g',
+      color: '#00A884',
       external: true,
     },
   ];

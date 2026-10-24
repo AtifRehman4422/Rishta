@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/validation.dart';
 import '../../core/widgets/fade_slide.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/social_links_bar.dart';
 import '../../core/widgets/urdu_text.dart';
 import '../../data/content/blog_posts.dart';
 import '../../data/content/info_content.dart';
@@ -86,6 +87,8 @@ class AboutScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 18),
+          const _Card(child: SocialLinksBar()),
         ],
       ),
     );
@@ -348,12 +351,30 @@ class _ContactScreenState extends State<ContactScreen> {
           const SizedBox(height: 12),
           _ContactInfoTile(
             icon: Icons.chat_rounded,
-            iconGradient: AppColors.goldGradient,
-            title: 'WhatsApp',
+            iconGradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF25D366), Color(0xFF128C7E)],
+            ),
+            title: 'WhatsApp Chat',
             value: 'Chat with support',
-            hint: '+92 300 1234567',
-            onTap: () => _launch('https://wa.me/923001234567'),
+            hint: '+92 343 5020077',
+            onTap: () => _launch('https://wa.me/923435020077'),
             delay: 90.ms,
+          ),
+          const SizedBox(height: 12),
+          _ContactInfoTile(
+            icon: Icons.campaign_rounded,
+            iconGradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF00A884), Color(0xFF075E54)],
+            ),
+            title: 'WhatsApp Channel',
+            value: 'Follow HumRishta',
+            hint: 'Updates · rishtay · announcements',
+            onTap: () => _launch('https://whatsapp.com/channel/0029VbELMHi4SpkEkfsXeZ3g'),
+            delay: 140.ms,
           ),
           const SizedBox(height: 12),
           _ContactInfoTile(
@@ -369,6 +390,11 @@ class _ContactScreenState extends State<ContactScreen> {
             onTap: () => _launch('https://humrishta.com'),
             delay: 180.ms,
           ),
+          const SizedBox(height: 18),
+          const _Card(child: SocialLinksBar())
+              .animate()
+              .fadeIn(delay: 220.ms, duration: 450.ms)
+              .slideY(begin: 0.08, end: 0, delay: 220.ms, duration: 450.ms),
           const SizedBox(height: 22),
           AnimatedSection(
             index: 0,

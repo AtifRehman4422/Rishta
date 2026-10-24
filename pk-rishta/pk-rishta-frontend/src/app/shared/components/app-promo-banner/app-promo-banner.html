@@ -1,0 +1,86 @@
+<section class="app-promo" aria-label="Download Hum Rishta app">
+  <div class="promo-bg" aria-hidden="true">
+    <img class="bg-photo" src="/app-promo-bg.jpg" alt="" />
+    <span class="bg-veil"></span>
+    <span class="sheen"></span>
+    <span class="float-heart h1">♥</span>
+    <span class="float-heart h2">♥</span>
+    <span class="float-heart h3">♥</span>
+    <span class="float-heart h4">♥</span>
+    <span class="float-heart h5">♥</span>
+    <span class="spark s1"></span>
+    <span class="spark s2"></span>
+    <span class="spark s3"></span>
+    <span class="spark s4"></span>
+    <span class="spark s5"></span>
+    <span class="spark s6"></span>
+  </div>
+
+  <div class="container promo-inner">
+    <div class="promo-copy promo-reveal" style="--d: 0s">
+      <div class="brand-row">
+        <img src="/images/logo.png" alt="Hum Rishta" class="brand-logo" width="104" height="104" />
+        <span class="brand-name">Hum <span>Rishta</span></span>
+      </div>
+      <h2>Get the Hum Rishta App</h2>
+      <p>
+        Find a life partner the halal way — browse verified profiles, save favorites,
+        and send contact requests on the go.
+      </p>
+      <ul class="promo-points">
+        <li>Verified matrimonial profiles</li>
+        <li>Smart filters by city &amp; preferences</li>
+        <li>Secure contact requests &amp; family-friendly</li>
+      </ul>
+    </div>
+
+    <div class="promo-phone promo-reveal" style="--d: 0.12s">
+      <div class="phone-frame">
+        <div class="phone-notch" aria-hidden="true"></div>
+        <img
+          src="/app-phone-mockup.png"
+          alt="Hum Rishta mobile app splash screen"
+          class="phone-screen"
+          loading="lazy"
+        />
+      </div>
+      <span class="phone-shadow" aria-hidden="true"></span>
+    </div>
+
+    <div class="promo-download promo-reveal" style="--d: 0.22s">
+      <a
+        class="play-btn"
+        [href]="playStoreUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <svg class="play-icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+          <path fill="#EA4335" d="M3 20.5V3.5c0-.6.5-1 1-1 .2 0 .4.1.6.2l12.5 7.2-2.8 2.8L3 20.5z"/>
+          <path fill="#FBBC04" d="M17.1 9.9 14.3 12.7 17.1 15.5 20.5 13.5c.7-.4.7-1.4 0-1.8l-3.4-1.8z"/>
+          <path fill="#4285F4" d="M3 20.5c0 .6.5 1 1 1 .2 0 .4-.1.6-.2l12.5-7.2-2.8-2.8L3 20.5z"/>
+          <path fill="#34A853" d="M3 3.5v17L14.3 12.7 3 3.5z"/>
+        </svg>
+        <span class="play-text">
+          <small>GET IT ON</small>
+          <strong>Google Play</strong>
+        </span>
+      </a>
+
+      <div class="qr-block">
+        <div class="qr-hint">
+          <p>Scan the QR code<br />to get the app</p>
+          <span class="qr-arrow" aria-hidden="true">↗</span>
+        </div>
+        <div class="qr-frame" title="Scan with your phone camera">
+          <img
+            [src]="qrSrc"
+            alt="QR code for Hum Rishta on Google Play — scan with your phone"
+            width="132"
+            height="132"
+            draggable="false"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

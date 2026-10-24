@@ -14,6 +14,60 @@ class ContactNumber {
   }
 }
 
+class ContactAccessStatus {
+  ContactAccessStatus({
+    required this.status,
+    this.adminMessage,
+    this.canRequestAgain = true,
+    this.canRequest = true,
+    this.pendingRemaining,
+    this.pendingLimit,
+    this.contacts = const [],
+    this.lastStatus,
+  });
+
+  final String status;
+  final String? adminMessage;
+  final bool canRequestAgain;
+  final bool canRequest;
+  final int? pendingRemaining;
+  final int? pendingLimit;
+  final List<ContactNumber> contacts;
+  final String? lastStatus;
+
+  bool get isRejectedPermanent =>
+      status == 'rejected' || canRequestAgain == false;
+
+  bool get canSendRequest {
+    if (status == 'own' || status == 'pending' || status == 'approved') {
+      return false;
+    }
+    if (isRejectedPermanent) return false;
+    if (!canRequest) return false;
+    if (pendingRemaining != null && pendingRemaining! <= 0) return false;
+    return status == 'none' || status == 'expired';
+  }
+
+  factory ContactAccessStatus.fromJson(Map<String, dynamic> json) {
+    int? toInt(dynamic v) =>
+        v == null ? null : (v is int ? v : int.tryParse(v.toString()));
+    final contactsRaw = json['contacts'] as List? ?? [];
+    return ContactAccessStatus(
+      status: (json['status'] ?? 'none').toString(),
+      adminMessage: json['admin_message']?.toString(),
+      canRequestAgain: json['can_request_again'] != false,
+      canRequest: json['can_request'] != false &&
+          json['can_request_today'] != false,
+      pendingRemaining: toInt(json['pending_remaining'] ?? json['daily_remaining']),
+      pendingLimit: toInt(json['pending_limit'] ?? json['daily_limit']),
+      lastStatus: json['last_status']?.toString(),
+      contacts: contactsRaw
+          .map((e) => ContactNumber.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
 class ContactAccessRequest {
   ContactAccessRequest({
     required this.id,

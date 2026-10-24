@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/ads/native_ad_card.dart';
 import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
@@ -349,65 +350,92 @@ class SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    final list = RefreshIndicator(
-      onRefresh: _search,
-      child: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Text(
-                '$_total profiles found',
-                style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                mainAxisExtent: 248,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final profile = _profiles[index];
-                  return ProfileCard(
-                    profile: profile,
-                    width: double.infinity,
-                    onTap: () => _openProfile(profile),
-                  );
-                },
-                childCount: _profiles.length,
-              ),
-            ),
-          ),
-          if (_hasMore || _loadingMore)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: SizedBox(
-                    width: 26,
-                    height: 26,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-
     return ListenableBuilder(
       listenable: AuthController.instance,
       builder: (context, _) {
+        final feed = _searchFeed(
+          _profiles,
+          includeAds: AuthController.instance.canViewProfiles,
+        );
+        final list = RefreshIndicator(
+          onRefresh: _search,
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: Text(
+                    '$_total profiles found',
+                    style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final entry = feed[index];
+                      if (entry.adSlot != null) {
+                        return NativeAdCard(slot: entry.adSlot!);
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 248,
+                                child: ProfileCard(
+                                  profile: entry.left!,
+                                  width: double.infinity,
+                                  onTap: () => _openProfile(entry.left!),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: entry.right == null
+                                  ? const SizedBox(height: 248)
+                                  : SizedBox(
+                                      height: 248,
+                                      child: ProfileCard(
+                                        profile: entry.right!,
+                                        width: double.infinity,
+                                        onTap: () => _openProfile(entry.right!),
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    childCount: feed.length,
+                  ),
+                ),
+              ),
+              if (_hasMore || _loadingMore)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: SizedBox(
+                        width: 26,
+                        height: 26,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+
         return ProfileAccessGate(
           onLogin: widget.onLogin,
           onCompleteProfile: widget.onCompleteProfile,
@@ -431,6 +459,34 @@ class SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
+}
+
+class _SearchFeedEntry {
+  const _SearchFeedEntry.profiles(this.left, this.right) : adSlot = null;
+  const _SearchFeedEntry.ad(this.adSlot)
+      : left = null,
+        right = null;
+
+  final Profile? left;
+  final Profile? right;
+  final int? adSlot;
+}
+
+List<_SearchFeedEntry> _searchFeed(List<Profile> profiles, {required bool includeAds}) {
+  final items = <_SearchFeedEntry>[];
+  var sinceAd = 0;
+  var adSlot = 0;
+  for (var i = 0; i < profiles.length; i += 2) {
+    final right = i + 1 < profiles.length ? profiles[i + 1] : null;
+    items.add(_SearchFeedEntry.profiles(profiles[i], right));
+    sinceAd += right == null ? 1 : 2;
+    if (includeAds && sinceAd >= 8) {
+      items.add(_SearchFeedEntry.ad(adSlot));
+      adSlot += 1;
+      sinceAd = 0;
+    }
+  }
+  return items;
 }
 
 class _FilterSheet extends StatefulWidget {

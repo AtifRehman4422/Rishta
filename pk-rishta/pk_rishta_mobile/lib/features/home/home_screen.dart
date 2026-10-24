@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/ads/native_ad_card.dart';
 import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
@@ -207,6 +208,12 @@ class HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                  ),
+                ),
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: NativeAdCard(slot: 0),
                   ),
                 ),
                 const SliverToBoxAdapter(child: _HowItWorksSection()),
@@ -565,7 +572,7 @@ class _Hero extends StatelessWidget {
                         ] else if (!auth.isAdmin) ...[
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Matching Profiles',
+                              label: 'AI Matching Profiles',
                               style: PrimaryButtonStyle.gold,
                               expanded: true,
                               onPressed: () => Navigator.of(context).push(

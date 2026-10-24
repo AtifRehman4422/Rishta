@@ -44,10 +44,22 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> login({required String email, required String password}) async {
+  Future<Map<String, dynamic>> getCaptcha() => _repo.getCaptcha();
+
+  Future<void> login({
+    required String email,
+    required String password,
+    required String captchaToken,
+    required String captchaAnswer,
+  }) async {
     _setLoading(true);
     try {
-      await _repo.login(email: email, password: password);
+      await _repo.login(
+        email: email,
+        password: password,
+        captchaToken: captchaToken,
+        captchaAnswer: captchaAnswer,
+      );
       await _refreshMe();
     } finally {
       _setLoading(false);

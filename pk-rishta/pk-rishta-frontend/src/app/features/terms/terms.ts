@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { Title, Meta } from '@angular/platform-browser';
+import { SeoService } from '../../core/services/seo.service';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -61,8 +61,7 @@ import { RouterLink } from '@angular/router';
   `],
 })
 export class TermsComponent implements OnInit {
-  private readonly title = inject(Title);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
 
   readonly sections = [
     {
@@ -156,10 +155,11 @@ export class TermsComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.title.setTitle('Terms of Service | Hum Rishta');
-    this.meta.updateTag({
-      name: 'description',
-      content: 'Hum Rishta Terms of Service — rules and guidelines for using our halal matrimonial platform.',
+    this.seo.apply({
+      title: 'Terms of Service',
+      description:
+        'Hum Rishta Terms of Service — rules for using Pakistan\'s trusted rishta and matrimonial website.',
+      path: '/terms',
     });
   }
 }

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { Title, Meta } from '@angular/platform-browser';
+import { SeoService } from '../../core/services/seo.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { BlogPost, getPostBySlug, getRelatedPosts } from '../../core/constants/blog-posts';
@@ -215,8 +215,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
 })
 export class BlogDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly title = inject(Title);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
 
   readonly adSlots = ADSENSE_SLOTS;
   post?: BlogPost;
@@ -233,10 +232,19 @@ export class BlogDetailComponent implements OnInit {
     this.post = getPostBySlug(slug);
     if (this.post) {
       this.related = getRelatedPosts(slug);
-      this.title.setTitle(`${this.post.title} | Hum Rishta Blog`);
-      this.meta.updateTag({ name: 'description', content: this.post.metaDescription });
+      this.seo.apply({
+        title: this.post.title,
+        description: this.post.metaDescription,
+        path: `/blog/${this.post.slug}`,
+        type: 'article',
+      });
     } else {
-      this.title.setTitle('Article Not Found | Hum Rishta');
+      this.seo.apply({
+        title: 'Article Not Found',
+        description: 'The requested Hum Rishta blog article could not be found.',
+        path: `/blog/${slug}`,
+        noIndex: true,
+      });
     }
   }
 

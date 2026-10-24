@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -98,10 +98,54 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
           <app-field-error [message]="formErrors.message('password')" />
         </div>
 
+        <div class="captcha-card animate-fade-in-up delay-3" [class.captcha-invalid]="formErrors.show('captcha')">
+          <div class="captcha-head">
+            <div>
+              <span class="captcha-badge">🛡️ Security check</span>
+              <p class="captcha-hint">Solve to prove you're human</p>
+            </div>
+            <button
+              type="button"
+              class="captcha-refresh"
+              (click)="loadCaptcha()"
+              [disabled]="captchaLoading()"
+              aria-label="Refresh captcha"
+            >
+              {{ captchaLoading() ? '…' : '↻' }}
+            </button>
+          </div>
+          <div class="captcha-body">
+            <div class="captcha-question" aria-hidden="true">
+              @if (captchaQuestion()) {
+                <span class="cq-num">{{ captchaLeft() }}</span>
+                <span class="cq-op">{{ captchaOp() }}</span>
+                <span class="cq-num">{{ captchaRight() }}</span>
+                <span class="cq-eq">=</span>
+              } @else {
+                <span class="cq-loading">Loading…</span>
+              }
+            </div>
+            <input
+              class="form-input auth-input captcha-input"
+              [class.input-invalid]="formErrors.show('captcha')"
+              type="text"
+              inputmode="numeric"
+              [(ngModel)]="captchaAnswer"
+              name="captcha"
+              placeholder="?"
+              autocomplete="off"
+              maxlength="3"
+              (blur)="formErrors.touch('captcha')"
+              (ngModelChange)="formErrors.clear('captcha')"
+            />
+          </div>
+          <app-field-error [message]="formErrors.message('captcha')" />
+        </div>
+
         <button
-          class="btn btn-primary auth-submit animate-fade-in-up delay-3"
+          class="btn btn-primary auth-submit animate-fade-in-up delay-4"
           type="submit"
-          [disabled]="loading()"
+          [disabled]="loading() || captchaLoading() || !captchaToken()"
           [class.is-loading]="loading()"
         >
           @if (loading()) {
@@ -251,23 +295,149 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
       border-radius: 12px;
       margin-bottom: 1rem;
     }
+
+    .captcha-card {
+      margin: 0.35rem 0 0.85rem;
+      padding: 0.95rem 1rem;
+      border-radius: 16px;
+      background:
+        radial-gradient(ellipse 80% 70% at 100% 0%, rgba(212, 175, 55, 0.16), transparent 55%),
+        linear-gradient(145deg, #fffdf8, #fff5f0);
+      border: 1.5px solid rgba(155, 27, 48, 0.14);
+      box-shadow: 0 8px 22px rgba(58, 8, 18, 0.06);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .captcha-card.captcha-invalid {
+      border-color: rgba(185, 28, 28, 0.45);
+      box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.08);
+    }
+    .captcha-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .captcha-badge {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #5A0E1A;
+      letter-spacing: 0.02em;
+    }
+    .captcha-hint {
+      margin: 0.2rem 0 0;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .captcha-refresh {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      border: 1px solid rgba(155, 27, 48, 0.18);
+      background: #fff;
+      color: #9B1B30;
+      font-size: 1.15rem;
+      cursor: pointer;
+      transition: transform 0.25s ease, background 0.2s ease;
+    }
+    .captcha-refresh:hover:not(:disabled) {
+      transform: rotate(-45deg);
+      background: #fff8f3;
+    }
+    .captcha-refresh:disabled { opacity: 0.55; cursor: wait; }
+    .captcha-body {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .captcha-question {
+      flex: 1;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #5A0E1A, #9B1B30 55%, #7A1528);
+      color: #F5E6B8;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 6px 16px rgba(155, 27, 48, 0.25);
+      font-family: var(--font-display, Georgia, serif);
+    }
+    .cq-num {
+      font-size: 1.45rem;
+      font-weight: 800;
+      min-width: 1.4rem;
+      text-align: center;
+    }
+    .cq-op, .cq-eq {
+      font-size: 1.25rem;
+      font-weight: 700;
+      opacity: 0.92;
+    }
+    .cq-loading { font-size: 0.9rem; opacity: 0.85; }
+    .captcha-input {
+      width: 72px;
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: 800;
+      padding: 0.7rem 0.4rem;
+    }
   `],
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
   email = '';
   password = '';
   otpCode = '';
+  captchaAnswer = '';
   loading = signal(false);
+  captchaLoading = signal(false);
   error = signal('');
   info = signal('');
   showPassword = signal(false);
   otpStep = signal(false);
+  captchaToken = signal('');
+  captchaQuestion = signal('');
   resendSeconds = signal(0);
   private resendTimer: ReturnType<typeof setInterval> | null = null;
   readonly formErrors = new FormErrorState();
+
+  ngOnInit(): void {
+    this.loadCaptcha();
+  }
+
+  captchaLeft(): string {
+    return this.captchaQuestion().split(/\s+/)[0] || '';
+  }
+
+  captchaOp(): string {
+    return this.captchaQuestion().split(/\s+/)[1] || '+';
+  }
+
+  captchaRight(): string {
+    return this.captchaQuestion().split(/\s+/)[2] || '';
+  }
+
+  loadCaptcha(): void {
+    this.captchaLoading.set(true);
+    this.captchaAnswer = '';
+    this.formErrors.clear('captcha');
+    this.auth.getCaptcha().subscribe({
+      next: (res) => {
+        this.captchaToken.set(res.data?.captcha_token || '');
+        this.captchaQuestion.set(res.data?.question || '');
+        this.captchaLoading.set(false);
+      },
+      error: () => {
+        this.captchaLoading.set(false);
+        this.error.set('Could not load security check. Please refresh.');
+      },
+    });
+  }
 
   resendLabel(): string {
     const s = this.resendSeconds();
@@ -291,15 +461,20 @@ export class LoginComponent {
 
   onSubmit(): void {
     this.formErrors.markSubmitted();
-    const errors = validateLoginForm(this.email, this.password);
+    const errors = validateLoginForm(this.email, this.password, this.captchaAnswer);
     this.formErrors.setAll(errors);
     if (Object.keys(errors).length) return;
+    if (!this.captchaToken()) {
+      this.error.set('Security check not ready. Please refresh.');
+      this.loadCaptcha();
+      return;
+    }
 
     this.loading.set(true);
     this.error.set('');
     this.info.set('');
 
-    this.auth.login(this.email, this.password).subscribe({
+    this.auth.login(this.email, this.password, this.captchaToken(), this.captchaAnswer.trim()).subscribe({
       next: () => {
         this.loading.set(false);
         if (this.auth.isAdmin()) {
@@ -318,6 +493,7 @@ export class LoginComponent {
           return;
         }
         this.error.set(body?.message || 'Login failed');
+        this.loadCaptcha();
       },
     });
   }

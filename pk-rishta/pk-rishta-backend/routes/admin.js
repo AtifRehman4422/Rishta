@@ -5,6 +5,12 @@ const {
   getContactRequests, reviewContactRequest, getComplaints, reviewComplaint, sendComplaintMessage,
   getContactFormMessages, updateContactFormMessage, replyContactFormMessage,
 } = require('../controllers/adminController');
+const {
+  getVisitorAnalytics,
+  getGapVisitors,
+  getDayVisitors,
+  getVisitorDetail,
+} = require('../controllers/analyticsController');
 const { adminUpdateProfile, adminCreateProfile } = require('../controllers/profileController');
 const {
   adminListOptions,
@@ -22,6 +28,10 @@ const router = express.Router();
 router.use(authenticate, requireAdmin);
 
 router.get('/dashboard', getDashboardStats);
+router.get('/analytics/visitors', getVisitorAnalytics);
+router.get('/analytics/visitors/gap', getGapVisitors);
+router.get('/analytics/visitors/day', getDayVisitors);
+router.get('/analytics/visitor-detail', getVisitorDetail);
 router.get('/users', getAllUsers);
 router.patch('/users/:id/toggle-status', toggleUserStatus);
 router.get('/profiles', getAllProfiles);

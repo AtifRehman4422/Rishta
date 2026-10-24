@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/validation.dart';
 import '../../core/widgets/auth_backdrop.dart';
 import '../../core/widgets/fade_slide.dart';
+import '../../core/widgets/guide_popup.dart';
 import '../../core/widgets/primary_button.dart';
 import 'login_screen.dart';
 
@@ -36,6 +37,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _info;
   int _resendSeconds = 0;
   Timer? _resendTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showGuidePopup(
+        context,
+        variant: GuidePopupVariant.registerPhone,
+      );
+    });
+  }
 
   @override
   void dispose() {

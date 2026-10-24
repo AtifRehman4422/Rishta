@@ -178,6 +178,15 @@ class ProfileRepository {
     });
   }
 
+  Future<ContactAccessStatus> getContactAccessStatus(String profileId) async {
+    final result = await _client.get('/contact-requests/status/$profileId');
+    final data = result.data;
+    if (data is Map<String, dynamic>) {
+      return ContactAccessStatus.fromJson(data);
+    }
+    return ContactAccessStatus(status: 'none');
+  }
+
   Future<List<ContactAccessRequest>> getMyContactRequests() async {
     final result = await _client.get('/contact-requests');
     final list = result.data as List? ?? [];

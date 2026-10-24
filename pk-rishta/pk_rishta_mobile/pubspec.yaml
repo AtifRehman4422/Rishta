@@ -1,7 +1,7 @@
 name: hum_rishta_mobile
 description: Hum Rishta — Pakistan's trusted matrimonial platform (humrishta.com)
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.4+10
 
 environment:
   sdk: ^3.12.2
@@ -16,6 +16,7 @@ dependencies:
   image_picker: ^1.1.2
   shared_preferences: ^2.3.2
   url_launcher: ^6.3.1
+  google_mobile_ads: ^9.1.0
 
 dev_dependencies:
   flutter_test:

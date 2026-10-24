@@ -5,6 +5,7 @@ const {
   resendOtp,
   forgotPassword,
   resetPassword,
+  getCaptcha,
   login,
   getMe,
 } = require('../controllers/authController');
@@ -19,6 +20,7 @@ router.post('/verify-register-otp', authLimiter, verifyRegisterOtp);
 router.post('/resend-otp', authLimiter, resendOtp);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/reset-password', authLimiter, resetPassword);
+router.get('/captcha', authLimiter, getCaptcha);
 router.post('/login', authLimiter, login);
 router.get('/me', authenticate, getMe);
 

@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Allow: /search
+Allow: /blog
+Allow: /about
+Allow: /contact
+Allow: /register
+Allow: /privacy
+Allow: /terms
+
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /my-profile
+Disallow: /favorites
+Disallow: /profile/new
+Disallow: /forgot-password
+
+Sitemap: https://humrishta.com/sitemap.xml

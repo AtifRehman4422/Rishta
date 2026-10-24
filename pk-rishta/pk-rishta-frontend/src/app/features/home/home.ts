@@ -15,11 +15,20 @@ import {
 import { ProfileCardComponent } from '../../shared/components/profile-card/profile-card';
 import { AdSlotComponent } from '../../shared/components/ad-slot/ad-slot';
 import { FloatingHeartsComponent } from '../../shared/components/floating-hearts/floating-hearts';
+import { AppPromoBannerComponent } from '../../shared/components/app-promo-banner/app-promo-banner';
 import { ADSENSE_SLOTS } from '../../core/constants/adsense';
+import { SeoService } from '../../core/services/seo.service';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, FormsModule, ProfileCardComponent, AdSlotComponent, FloatingHeartsComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    ProfileCardComponent,
+    AdSlotComponent,
+    FloatingHeartsComponent,
+    AppPromoBannerComponent,
+  ],
   template: `
     <!-- Hero -->
     <section class="hero bg-hero">
@@ -37,16 +46,16 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
         <div class="hero-text animate-fade-in-up">
           <div class="hero-badge">
             <span class="badge-dot"></span>
-            Pakistan's Trusted Matchmaking Platform
+            Pakistan's Trusted Rishta & Matrimonial Website
           </div>
           <h1>
-            Your <span class="highlight">Blessed</span> Journey<br>
-            to a Beautiful <span class="highlight-gold">Nikah</span>
+            Find Your Blessed <span class="highlight">Rishta</span><br>
+            on Pakistan's <span class="highlight-gold">Matrimonial</span> Platform
           </h1>
           <p class="hero-urdu text-urdu">اللہ کے نام سے — اپنا رشتہ تلاش کریں</p>
           <p class="hero-desc">
-            Halal matches, verified families, and thousands of profiles from across Pakistan.
-            Your marriage journey starts here.
+            Hum Rishta is a trusted online rishta website for halal matches, verified families,
+            and serious marriage proposals across Pakistan and overseas.
           </p>
 
           @if (!auth.isLoggedIn() || auth.isAdmin() || auth.currentUser()?.is_profile_complete) {
@@ -147,7 +156,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
                 <a routerLink="/register" class="btn btn-secondary btn-lg">💍 Register Free</a>
                 <a routerLink="/search" class="btn btn-outline-light btn-lg">Search Profiles</a>
               } @else if (!auth.isAdmin()) {
-                <a routerLink="/search" [queryParams]="{ matching: 'true' }" class="btn btn-secondary btn-lg">Matching Profiles</a>
+                <a routerLink="/search" [queryParams]="{ matching: 'true' }" class="btn btn-secondary btn-lg">AI Matching Profiles</a>
                 <a routerLink="/my-profile" class="btn btn-outline-light btn-lg">My Profile</a>
               }
             </div>
@@ -284,14 +293,57 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       </div>
     </section>
 
+    <app-app-promo-banner />
+
+    <!-- SEO content -->
+    <section class="seo-section page-section">
+      <div class="container seo-box">
+        <h2 class="section-title text-center">Best Online Rishta & Matrimonial Website in Pakistan</h2>
+        <p class="section-subtitle text-center">
+          Looking for a safe rishta website? Hum Rishta helps families find compatible matches for marriage.
+        </p>
+        <div class="seo-grid">
+          <article class="seo-card">
+            <h3>Rishta website for serious families</h3>
+            <p>
+              Search profiles by city, education, and preferences. Contact numbers stay private until
+              a request is approved — ideal for a respectful Pakistani rishta process.
+            </p>
+          </article>
+          <article class="seo-card">
+            <h3>Matrimonial website you can trust</h3>
+            <p>
+              Unlike casual apps, this matrimonial website is built for nikah. Parents can stay involved,
+              and admin review helps reduce fake or misuse risks.
+            </p>
+          </article>
+          <article class="seo-card">
+            <h3>Free registration across Pakistan</h3>
+            <p>
+              Create your free profile, explore matches from Lahore, Karachi, Islamabad and overseas,
+              then connect through Hum Rishta's secure request flow.
+            </p>
+          </article>
+        </div>
+        <p class="seo-links text-center">
+          Read more:
+          <a routerLink="/blog/best-rishta-matrimonial-website-pakistan">Best rishta website guide</a>
+          ·
+          <a routerLink="/blog/how-to-find-right-rishta-pakistan">How to find the right rishta</a>
+          ·
+          <a routerLink="/about">About Hum Rishta</a>
+        </p>
+      </div>
+    </section>
+
     <!-- CTA -->
     <section class="cta-section">
       <app-floating-hearts [light]="true" />
       <div class="container text-center cta-inner">
         <span class="cta-ring animate-float">💍</span>
-        <h2 class="animate-fade-in-up">Register your profile today</h2>
+        <h2 class="animate-fade-in-up">Register free on Pakistan's rishta website</h2>
         <p class="text-urdu cta-urdu">آج ہی اپنا رشتہ رجسٹر کریں — مکمل مفت</p>
-        <p>Thousands of Pakistani families have found their match here. Now it's your turn.</p>
+        <p>Thousands of Pakistani families search for matrimonial matches here. Now it's your turn.</p>
         <div class="cta-buttons">
           <a routerLink="/register" class="btn btn-secondary btn-lg">💍 Create a free profile</a>
           <a routerLink="/search" class="btn btn-outline btn-lg cta-outline">View Profiles</a>
@@ -738,8 +790,48 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
       .search-row { grid-template-columns: 1fr 1fr; }
       .hero-gate-steps { grid-template-columns: repeat(2, 1fr); }
     }
+    .seo-section { background: linear-gradient(180deg, #fff8f3 0%, #fff 100%); }
+    .seo-box { max-width: 960px; margin: 0 auto; }
+    .seo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .seo-card {
+      padding: 1.25rem;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid rgba(155, 27, 48, 0.1);
+      box-shadow: 0 8px 24px rgba(58, 8, 18, 0.04);
+    }
+    .seo-card h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.05rem;
+      color: var(--primary-dark, #5A0E1A);
+    }
+    .seo-card p {
+      margin: 0;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: var(--text-muted, #666);
+    }
+    .seo-links {
+      margin-top: 1.5rem;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+    }
+    .seo-links a {
+      color: var(--primary, #9B1B30);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .seo-links a:hover { text-decoration: underline; }
+    @media (max-width: 900px) {
+      .seo-grid { grid-template-columns: 1fr; }
+    }
     @media (max-width: 640px) {
-      .hero h1 { font-size: 2.1rem; }
+      .hero h1 { font-size: 1.85rem; }
       .why-grid, .testimonial-grid { grid-template-columns: 1fr; }
       .search-row { grid-template-columns: 1fr; }
       .hero-gate-steps { grid-template-columns: 1fr; }
@@ -749,6 +841,7 @@ import { ADSENSE_SLOTS } from '../../core/constants/adsense';
 })
 export class HomeComponent implements OnInit {
   private readonly profileService = inject(ProfileService);
+  private readonly seo = inject(SeoService);
   readonly auth = inject(AuthService);
 
   readonly adSlots = ADSENSE_SLOTS;
@@ -807,6 +900,14 @@ export class HomeComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.seo.apply({
+      title: 'Hum Rishta — Best Rishta & Matrimonial Website in Pakistan',
+      description:
+        'Hum Rishta is Pakistan\'s trusted rishta and matrimonial website. Find halal matches, verified profiles, and family-oriented marriage proposals across Pakistan and overseas.',
+      path: '/',
+      keywords:
+        'rishta, rishta website, matrimonial website, Hum Rishta, online rishta Pakistan, Pakistani matrimonial, shadi, nikah',
+    });
     this.loadRecentIfAllowed();
   }
 

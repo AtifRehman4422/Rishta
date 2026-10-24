@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { AdminStats } from '../../../core/models';
 import { AdminService } from '../../../core/services/admin.service';
+import { AdminVisitorAnalyticsComponent } from '../admin-visitor-analytics/admin-visitor-analytics';
 
 interface StatCard {
   icon: string;
@@ -18,7 +19,7 @@ interface StatCard {
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [RouterLink, NgTemplateOutlet],
+  imports: [RouterLink, NgTemplateOutlet, AdminVisitorAnalyticsComponent],
   template: `
     <div class="admin-page">
       <header class="dash-header animate-fade-in-up">
@@ -31,6 +32,8 @@ interface StatCard {
           Live Stats
         </div>
       </header>
+
+      <app-admin-visitor-analytics />
 
       @if (loading()) {
         <div class="loading-center"><div class="spinner"></div></div>

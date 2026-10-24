@@ -1,16 +1,17 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { Title, Meta } from '@angular/platform-browser';
+import { SeoService } from '../../core/services/seo.service';
 import { RouterLink } from '@angular/router';
+import { SocialLinksComponent } from '../../shared/components/social-links/social-links';
 
 @Component({
   selector: 'app-about',
-  imports: [RouterLink],
+  imports: [RouterLink, SocialLinksComponent],
   template: `
     <section class="page-hero bg-page-header">
       <div class="container hero-inner animate-fade-in-up">
         <h1>About <span class="gold">Hum Rishta</span></h1>
         <p class="text-urdu">ہمارے بارے میں</p>
-        <p class="hero-sub">Pakistan's trusted halal matrimonial platform — connecting families with faith, respect, and tradition since 2024.</p>
+        <p class="hero-sub">Pakistan's trusted rishta and matrimonial website — connecting families with faith, respect, and tradition.</p>
       </div>
     </section>
 
@@ -60,6 +61,10 @@ import { RouterLink } from '@angular/router';
         </ul>
       </section>
 
+      <section class="content-card social-card card animate-fade-in-up delay-5">
+        <app-social-links title="Connect with Hum Rishta" />
+      </section>
+
       <div class="cta-box card animate-fade-in-up delay-5">
         <h3>Start Your Blessed Journey</h3>
         <p>Join Hum Rishta today — registration is completely free.</p>
@@ -80,6 +85,7 @@ import { RouterLink } from '@angular/router';
     .content-card h2 { font-family: var(--font-display); color: var(--primary-dark); margin-bottom: 1rem; font-size: 1.35rem; }
     .content-card p { line-height: 1.8; color: var(--text); margin-bottom: 1rem; }
     .content-card p:last-child { margin-bottom: 0; }
+    .social-card { padding: 1.75rem 1.25rem; }
     .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 1.5rem; }
     .value-card { padding: 1.5rem; text-align: center; transition: var(--transition); }
     .value-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
@@ -96,8 +102,7 @@ import { RouterLink } from '@angular/router';
   `],
 })
 export class AboutComponent implements OnInit {
-  private readonly title = inject(Title);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
 
   readonly values = [
     { icon: '🕌', title: 'Halal & Respectful', desc: 'Every feature is designed for Islamic matrimonial search with family involvement.' },
@@ -106,10 +111,11 @@ export class AboutComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.title.setTitle('About Us | Hum Rishta — Pakistan Matrimonial Platform');
-    this.meta.updateTag({
-      name: 'description',
-      content: 'Learn about Hum Rishta — Pakistan\'s trusted halal matrimonial platform for verified matches, family connections, and safe contact sharing.',
+    this.seo.apply({
+      title: 'About Hum Rishta — Pakistan Rishta & Matrimonial Website',
+      description:
+        'About Hum Rishta — Pakistan\'s trusted rishta and matrimonial website for verified matches, family connections, and safe contact sharing.',
+      path: '/about',
     });
   }
 }

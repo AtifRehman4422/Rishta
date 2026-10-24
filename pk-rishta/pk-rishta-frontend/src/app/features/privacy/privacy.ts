@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { Title, Meta } from '@angular/platform-browser';
+import { SeoService } from '../../core/services/seo.service';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -63,8 +63,7 @@ import { RouterLink } from '@angular/router';
   `],
 })
 export class PrivacyComponent implements OnInit {
-  private readonly title = inject(Title);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
 
   readonly sections = [
     {
@@ -157,10 +156,11 @@ export class PrivacyComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.title.setTitle('Privacy Policy | Hum Rishta');
-    this.meta.updateTag({
-      name: 'description',
-      content: 'Hum Rishta Privacy Policy — how we collect, use, and protect your personal information on our matrimonial platform.',
+    this.seo.apply({
+      title: 'Privacy Policy',
+      description:
+        'Hum Rishta Privacy Policy — how we collect, use, and protect your personal information on our rishta and matrimonial website.',
+      path: '/privacy',
     });
   }
 }

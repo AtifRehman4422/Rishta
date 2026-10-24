@@ -5,6 +5,67 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AdminStats, AdminUser, ApiResponse, Complaint, ComplaintMessage, Profile, AdminContactRequest, PartnerPreferences, ContactFormMessage } from '../models';
 
+export interface AdminVisitorRow {
+  visitor_key: string;
+  user_id?: string | null;
+  email?: string | null;
+  profile_id?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  page_views: number;
+  last_path?: string | null;
+  first_seen_at?: string;
+  last_seen_at?: string;
+  searches_count: number;
+  profile_views_count: number;
+  display_name: string;
+}
+
+export interface AdminVisitorDetail {
+  from: string;
+  to: string;
+  visitor_key: string;
+  meta: {
+    page_views?: number;
+    first_visit?: string;
+    last_visit?: string;
+    visit_days?: number;
+  } | null;
+  user: {
+    id: string;
+    email?: string;
+    profile_id?: string;
+    first_name?: string;
+    last_name?: string;
+    gender?: string;
+    city?: string;
+  } | null;
+  visit_days: {
+    visit_date: string;
+    page_views: number;
+    last_path?: string;
+    first_seen_at?: string;
+    last_seen_at?: string;
+  }[];
+  searches: {
+    id: string;
+    created_at: string;
+    path?: string;
+    summary: string;
+    filters: Record<string, unknown>;
+  }[];
+  profile_views: {
+    id: string;
+    created_at: string;
+    profile_id: string;
+    first_name: string;
+    last_name: string;
+    gender?: string | null;
+    city?: string | null;
+    province?: string | null;
+  }[];
+}
+
 export interface DropdownOption {
   id: string;
   field_key: string;
@@ -37,6 +98,76 @@ export class AdminService {
 
   getDashboard(): Observable<ApiResponse<AdminStats>> {
     return this.http.get<ApiResponse<AdminStats>>(`${this.baseUrl}/dashboard`);
+  }
+
+  getVisitorAnalytics(from: string, to: string): Observable<ApiResponse<{
+    from: string;
+    to: string;
+    total_visitors: number;
+    total_page_views: number;
+    daily: { date: string; visitors: number; page_views: number }[];
+    return_gaps: {
+      new: number;
+      daily: number;
+      skip_1: number;
+      skip_2: number;
+      skip_3: number;
+      skip_4_plus: number;
+    };
+  }>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http.get<ApiResponse<{
+      from: string;
+      to: string;
+      total_visitors: number;
+      total_page_views: number;
+      daily: { date: string; visitors: number; page_views: number }[];
+      return_gaps: {
+        new: number;
+        daily: number;
+        skip_1: number;
+        skip_2: number;
+        skip_3: number;
+        skip_4_plus: number;
+      };
+    }>>(`${this.baseUrl}/analytics/visitors`, { params });
+  }
+
+  getDayVisitors(date: string): Observable<ApiResponse<{
+    date: string;
+    visitors: AdminVisitorRow[];
+  }>> {
+    const params = new HttpParams().set('date', date);
+    return this.http.get<ApiResponse<{ date: string; visitors: AdminVisitorRow[] }>>(
+      `${this.baseUrl}/analytics/visitors/day`,
+      { params }
+    );
+  }
+
+  getGapVisitors(gap: string, from: string, to: string): Observable<ApiResponse<{
+    from: string;
+    to: string;
+    gap: string;
+    visitors: AdminVisitorRow[];
+  }>> {
+    const params = new HttpParams().set('gap', gap).set('from', from).set('to', to);
+    return this.http.get<ApiResponse<{
+      from: string;
+      to: string;
+      gap: string;
+      visitors: AdminVisitorRow[];
+    }>>(`${this.baseUrl}/analytics/visitors/gap`, { params });
+  }
+
+  getVisitorDetail(visitorKey: string, from: string, to: string): Observable<ApiResponse<AdminVisitorDetail>> {
+    const params = new HttpParams()
+      .set('visitor_key', visitorKey)
+      .set('from', from)
+      .set('to', to);
+    return this.http.get<ApiResponse<AdminVisitorDetail>>(
+      `${this.baseUrl}/analytics/visitor-detail`,
+      { params }
+    );
   }
 
   getUsers(page = 1, search = '', status = ''): Observable<ApiResponse<AdminUser[]>> {

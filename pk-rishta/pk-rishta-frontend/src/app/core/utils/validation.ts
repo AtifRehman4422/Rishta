@@ -185,10 +185,17 @@ export function validateRegisterForm(data: RegisterFormData): FieldErrors {
   return errors;
 }
 
-export function validateLoginForm(email: string, password: string): FieldErrors {
+export function validateLoginForm(
+  email: string,
+  password: string,
+  captchaAnswer?: string
+): FieldErrors {
   const errors: FieldErrors = {};
   setError(errors, 'email', validateEmail(email));
   if (isEmpty(password)) setError(errors, 'password', 'Password is required');
+  if (captchaAnswer !== undefined && isEmpty(String(captchaAnswer).trim())) {
+    setError(errors, 'captcha', 'Please solve the security check');
+  }
   return errors;
 }
 

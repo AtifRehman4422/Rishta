@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const fs = require('fs');
+const path = require('path');
 const http = require('http');
 const https = require('https');
 const express = require('express');
@@ -22,6 +23,24 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+function resolveFrontendDist() {
+  const candidates = [
+    process.env.FRONTEND_DIST,
+    path.join(__dirname, 'public'),
+    path.join(__dirname, 'frontend'),
+    path.join(__dirname, '..', 'pk-rishta-frontend', 'dist', 'pk-rishta-frontend', 'browser'),
+  ].filter(Boolean);
+
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, 'index.html'))) {
+      return dir;
+    }
+  }
+  return null;
+}
+
+const FRONTEND_DIST = resolveFrontendDist();
 
 if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
   console.error('FATAL: Set JWT_SECRET to a random string of at least 32 characters in production.');
@@ -98,8 +117,45 @@ app.use('/api/address-disclosures', require('./routes/addressDisclosures'));
 app.use('/api/dropdowns', require('./routes/dropdowns'));
 app.use('/api/admin', adminRoutes);
 
-app.use((_req, res) => {
+// Unknown API routes stay JSON 404.
+app.use('/api', (_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
+});
+
+// Serve Angular build + SPA fallback so refresh on /search, /login, etc. works.
+if (FRONTEND_DIST) {
+  app.use(express.static(FRONTEND_DIST, { index: false, maxAge: isProduction ? '1h' : 0 }));
+
+  // Middleware (not regex route) so Express 5 + Passenger always hit this for deep links.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return next();
+    }
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return next();
+    }
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'), (err) => {
+      if (err) next(err);
+    });
+  });
+  console.log(`Serving frontend from: ${FRONTEND_DIST}`);
+} else if (isProduction) {
+  console.warn(
+    'WARNING: No Angular build found. Upload frontend to backend/public (with index.html) ' +
+      'or set FRONTEND_DIST. Until then, page refresh will return JSON 404.'
+  );
+}
+
+app.use((req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ success: false, message: 'Route not found' });
+  }
+  res.status(404).json({
+    success: false,
+    message: FRONTEND_DIST
+      ? 'Route not found'
+      : 'Frontend not deployed. Upload Angular build to backend/public or set FRONTEND_DIST, and put .htaccess in the web root.',
+  });
 });
 
 app.use((err, _req, res, _next) => {
@@ -121,6 +177,7 @@ function startServer() {
     };
     https.createServer(credentials, app).listen(PORT, () => {
       console.log(`Hum Rishta Backend (HTTPS) running on port ${PORT}`);
+      warnIfSmtpMisconfigured();
     });
     return;
   }

@@ -7,11 +7,18 @@ import { validateRegisterForm } from '../../../core/utils/validation';
 import { AuthService } from '../../../core/services/auth.service';
 import { AuthShellComponent } from '../../../shared/components/auth-shell/auth-shell';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error';
+import { GuidePopupComponent } from '../../../shared/components/guide-popup/guide-popup';
 
 @Component({
   selector: 'app-register',
-  imports: [FormsModule, RouterLink, AuthShellComponent, FieldErrorComponent],
+  imports: [FormsModule, RouterLink, AuthShellComponent, FieldErrorComponent, GuidePopupComponent],
   template: `
+    <app-guide-popup
+      [open]="showPhoneGuide()"
+      variant="register-phone"
+      dismissLabel="Got it — سمجھ گیا"
+      (closed)="showPhoneGuide.set(false)"
+    />
     <app-auth-shell
       [wide]="true"
       title="Create Your Profile"
@@ -447,6 +454,7 @@ export class RegisterComponent {
   loading = signal(false);
   error = signal('');
   info = signal('');
+  showPhoneGuide = signal(true);
   showPassword = signal(false);
   otpStep = signal(false);
   otpCode = '';

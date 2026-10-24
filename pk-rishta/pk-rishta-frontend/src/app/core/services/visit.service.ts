@@ -26,11 +26,50 @@ export class VisitService {
     this.ping(path).subscribe();
   }
 
+  trackSearch(filters: Record<string, unknown>, resultCount: number, path = '/search'): void {
+    this.trackActivity('search', path, { ...filters, result_count: resultCount });
+  }
+
+  trackProfileView(profile: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    gender?: string;
+    city?: string;
+  }): void {
+    this.trackActivity('profile_view', `/profile/${profile.id}`, {
+      profile_id: profile.id,
+      first_name: profile.first_name || '',
+      last_name: profile.last_name || '',
+      gender: profile.gender || '',
+      city: profile.city || '',
+    });
+  }
+
+  private trackActivity(
+    eventType: 'search' | 'profile_view',
+    path: string,
+    payload: Record<string, unknown>
+  ): void {
+    if (typeof localStorage === 'undefined') return;
+    this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/activity`, {
+        visitor_key: this.getOrCreateVisitorKey(),
+        event_type: eventType,
+        path: path.slice(0, 200),
+        payload,
+      })
+      .pipe(catchError(() => of({ success: false, data: null } as ApiResponse<unknown>)))
+      .subscribe();
+  }
+
   private ping(path: string): Observable<ApiResponse<unknown>> {
-    return this.http.post<ApiResponse<unknown>>(this.baseUrl, {
-      visitor_key: this.getOrCreateVisitorKey(),
-      path: path.slice(0, 200),
-    }).pipe(catchError(() => of({ success: false, data: null } as ApiResponse<unknown>)));
+    return this.http
+      .post<ApiResponse<unknown>>(this.baseUrl, {
+        visitor_key: this.getOrCreateVisitorKey(),
+        path: path.slice(0, 200),
+      })
+      .pipe(catchError(() => of({ success: false, data: null } as ApiResponse<unknown>)));
   }
 
   private getOrCreateVisitorKey(): string {

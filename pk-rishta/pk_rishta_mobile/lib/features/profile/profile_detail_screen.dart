@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../core/ads/ads_controller.dart';
+import '../../core/ads/native_ad_card.dart';
 import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/state/favorites_controller.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/guide_popup.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/profile_access_gate.dart';
+import '../../data/models/contact_request_model.dart';
 import '../../data/models/family_details.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/admin_repository.dart';
@@ -35,6 +39,8 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   bool _sharingAddress = false;
   int _requestLimit = 3;
   bool _savingLimit = false;
+  ContactAccessStatus? _accessStatus;
+  bool _loadingAccess = false;
 
   String _complaintCategory = 'fake_profile';
   final _complaintDescCtrl = TextEditingController();
@@ -71,12 +77,40 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         _requestLimit = profile.contactRequestLimit ?? 3;
         _loading = false;
       });
+      await _loadAccessStatus();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _loadAccessStatus() async {
+    final auth = AuthController.instance;
+    if (!auth.isLoggedIn ||
+        auth.isAdmin ||
+        auth.needsProfileCompletion ||
+        auth.user?.profileId == widget.profileId) {
+      if (!mounted) return;
+      setState(() => _accessStatus = null);
+      return;
+    }
+    setState(() => _loadingAccess = true);
+    try {
+      final status = await _repo.getContactAccessStatus(widget.profileId);
+      if (!mounted) return;
+      setState(() {
+        _accessStatus = status;
+        _loadingAccess = false;
+      });
+    } on ApiException {
+      if (!mounted) return;
+      setState(() => _loadingAccess = false);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingAccess = false);
     }
   }
 
@@ -115,6 +149,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
       if (ok != true) return;
+      await _loadAccessStatus();
     }
     if (AuthController.instance.needsProfileCompletion) {
       if (!mounted) return;
@@ -122,6 +157,53 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         MaterialPageRoute<void>(builder: (_) => const MyProfileScreen()),
       );
       return;
+    }
+    if (_accessStatus?.isRejectedPermanent == true) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your previous request was declined. You cannot send another request to this profile.',
+          ),
+          backgroundColor: Color(0xFFB91C1C),
+        ),
+      );
+      return;
+    }
+    if (_accessStatus != null && !_accessStatus!.canSendRequest) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _accessStatus!.status == 'pending'
+                ? 'You already have a pending request for this profile.'
+                : 'You cannot send a contact request right now.',
+          ),
+          backgroundColor: const Color(0xFFB91C1C),
+        ),
+      );
+      return;
+    }
+
+    final guided = await showGuidePopup(
+      context,
+      variant: GuidePopupVariant.contactRequest,
+      cancelLabel: 'Not now',
+      confirmLabel: 'Send request — درخواست بھیجیں',
+    );
+    if (!mounted || guided != true) return;
+
+    if (AdsController.instance.canShowAds) {
+      final result = await AdsController.instance.showRewarded();
+      if (!mounted) return;
+      if (result == RewardedResult.closed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Watch the full video to send this contact request.'),
+          ),
+        );
+        return;
+      }
     }
     setState(() => _sending = true);
     try {
@@ -133,14 +215,25 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
           backgroundColor: Color(0xFF15803D),
         ),
       );
+      await _loadAccessStatus();
     } on ApiException catch (e) {
       if (!mounted) return;
+      if (e.statusCode == 403) {
+        setState(() {
+          _accessStatus = ContactAccessStatus(
+            status: 'rejected',
+            canRequestAgain: false,
+            adminMessage: e.message,
+          );
+        });
+      }
       final msg = e.statusCode == 401
           ? 'Please login again to request a contact number.'
           : e.message;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), backgroundColor: const Color(0xFFB91C1C)),
       );
+      await _loadAccessStatus();
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -525,11 +618,22 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
 
   Widget _detailView(Profile profile) {
     final auth = AuthController.instance;
+    final access = _accessStatus;
+    final rejected = access?.isRejectedPermanent == true;
+    final pending = access?.status == 'pending';
+    final approved = access?.status == 'approved';
+    final canRequest = !auth.isLoggedIn ||
+        auth.needsProfileCompletion ||
+        (access == null
+            ? true
+            : access.canSendRequest);
     final interestLabel = !auth.isLoggedIn
         ? 'Login to Request Contact'
         : auth.needsProfileCompletion
             ? 'Complete Profile to Continue'
-            : 'Request Contact';
+            : AdsController.instance.canShowAds
+                ? 'Watch video & request contact'
+                : 'Request Contact';
     final prefs = profile.partnerPreferences;
 
     return CustomScrollView(
@@ -812,6 +916,16 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                 ],
                 const SizedBox(height: 24),
                 if (!auth.isAdmin) ...[
+                  if (auth.user?.profileId != profile.id)
+                    ListenableBuilder(
+                      listenable: AuthController.instance,
+                      builder: (context, _) {
+                        if (!AuthController.instance.canViewProfiles) {
+                          return const SizedBox.shrink();
+                        }
+                        return const NativeAdCard(slot: 2);
+                      },
+                    ),
                   if (auth.isLoggedIn && auth.user?.profileId != profile.id)
                     _AddressShareCard(
                       profile: profile,
@@ -834,14 +948,49 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                         style: TextStyle(color: AppColors.textMuted, height: 1.4),
                       ),
                     ),
-                  _sending
-                      ? const Center(child: CircularProgressIndicator())
-                      : PrimaryButton(
-                          label: interestLabel,
-                          icon: Icons.phone_in_talk_rounded,
-                          expanded: true,
-                          onPressed: _sendInterest,
-                        ),
+                  if (_loadingAccess)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (rejected)
+                    _ContactStatusBanner(
+                      icon: Icons.block_rounded,
+                      color: const Color(0xFFB91C1C),
+                      title: 'Request Declined',
+                      message: access?.adminMessage?.trim().isNotEmpty == true
+                          ? access!.adminMessage!
+                          : 'This profile declined your request. You cannot send another contact request to them.',
+                    )
+                  else if (pending)
+                    const _ContactStatusBanner(
+                      icon: Icons.hourglass_top_rounded,
+                      color: Color(0xFFB45309),
+                      title: 'Request Pending',
+                      message:
+                          'Your contact request was sent. Wait for a response — you cannot send another request while this one is pending.',
+                    )
+                  else if (approved)
+                    _ContactStatusBanner(
+                      icon: Icons.check_circle_rounded,
+                      color: const Color(0xFF15803D),
+                      title: 'Contact Shared',
+                      message: access!.contacts.isEmpty
+                          ? 'Your request was approved. Contact details will appear when available.'
+                          : access.contacts
+                              .map((c) =>
+                                  '${c.type == 'whatsapp' ? 'WhatsApp' : 'Phone'}: ${c.number}')
+                              .join('\n'),
+                    )
+                  else if (_sending)
+                    const Center(child: CircularProgressIndicator())
+                  else if (canRequest)
+                    PrimaryButton(
+                      label: interestLabel,
+                      icon: Icons.phone_in_talk_rounded,
+                      expanded: true,
+                      onPressed: _sendInterest,
+                    ),
                 ],
               ],
             ),
@@ -1352,6 +1501,63 @@ class _FamilyDetailsView extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+    );
+  }
+}
+
+class _ContactStatusBanner extends StatelessWidget {
+  const _ContactStatusBanner({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

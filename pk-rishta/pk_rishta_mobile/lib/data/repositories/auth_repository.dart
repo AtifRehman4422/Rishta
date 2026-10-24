@@ -20,10 +20,22 @@ class AuthRepository {
 
   final ApiClient _client;
 
-  Future<AppUser> login({required String email, required String password}) async {
+  Future<Map<String, dynamic>> getCaptcha() async {
+    final result = await _client.get('/auth/captcha');
+    return (result.data as Map<String, dynamic>?) ?? {};
+  }
+
+  Future<AppUser> login({
+    required String email,
+    required String password,
+    required String captchaToken,
+    required String captchaAnswer,
+  }) async {
     final result = await _client.post('/auth/login', body: {
       'email': email,
       'password': password,
+      'captcha_token': captchaToken,
+      'captcha_answer': captchaAnswer,
     });
     final data = result.data as Map<String, dynamic>;
     await _client.setToken(data['token'] as String?);

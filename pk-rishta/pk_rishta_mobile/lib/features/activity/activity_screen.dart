@@ -8,6 +8,7 @@ import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/fade_slide.dart';
 import '../../core/widgets/gradient_header.dart';
+import '../../core/widgets/guide_popup.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/urdu_text.dart';
 import '../../data/models/contact_request_model.dart';
@@ -185,6 +186,17 @@ class ActivityScreenState extends State<ActivityScreen> {
     final ampm = dt.hour >= 12 ? 'pm' : 'am';
     final min = dt.minute.toString().padLeft(2, '0');
     return '${dt.day.toString().padLeft(2, '0')}-${months[dt.month - 1]}-${dt.year}, $h:$min $ampm';
+  }
+
+  Future<void> _acceptWithGuide(String id) async {
+    final ok = await showGuidePopup(
+      context,
+      variant: GuidePopupVariant.contactRequest,
+      cancelLabel: 'Not now',
+      confirmLabel: 'Accept — قبول کریں',
+    );
+    if (!mounted || ok != true) return;
+    await _respond(id, 'approve');
   }
 
   Future<void> _respond(String id, String action, {String? message}) async {
@@ -660,7 +672,7 @@ class ActivityScreenState extends State<ActivityScreen> {
                                     declining: _declineId == e.value.id,
                                     declineCtrl: _declineCtrl,
                                     onAccept: () =>
-                                        _respond(e.value.id, 'approve'),
+                                        _acceptWithGuide(e.value.id),
                                     onDeclineStart: () => setState(() {
                                       _declineId = e.value.id;
                                       _declineCtrl.clear();

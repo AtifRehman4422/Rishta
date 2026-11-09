@@ -5,13 +5,13 @@ const {
   getMatchingProfiles, getStats, getFilterOptions,
 } = require('../controllers/profileController');
 const { upload, uploadProfilePhoto } = require('../controllers/uploadController');
-const { authenticate, requireCompleteProfile } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate, requireCompleteProfile } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.get('/stats', getStats);
 router.get('/filters', getFilterOptions);
-router.get('/search', authenticate, requireCompleteProfile, searchProfiles);
+router.get('/search', optionalAuthenticate, searchProfiles);
 router.get('/me', authenticate, getMyProfile);
 router.put('/me', authenticate, updateMyProfile);
 router.get('/matches', authenticate, requireCompleteProfile, getMatchingProfiles);

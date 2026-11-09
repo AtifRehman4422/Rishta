@@ -64,15 +64,7 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   void _onAuthChanged() {
-    if (!AuthController.instance.canViewProfiles) {
-      if (_recent.isNotEmpty) {
-        setState(() => _recent = []);
-      }
-      return;
-    }
-    if (_recent.isEmpty && !_loadingRecent) {
-      _loadRecent();
-    }
+    _loadRecent();
   }
 
   /// Scrolls this tab's list back to the top when its nav item is tapped.
@@ -87,15 +79,6 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadRecent() async {
-    if (!AuthController.instance.canViewProfiles) {
-      if (!mounted) return;
-      setState(() {
-        _recent = [];
-        _loadingRecent = false;
-        _recentError = null;
-      });
-      return;
-    }
     setState(() {
       _loadingRecent = true;
       _recentError = null;
@@ -577,7 +560,10 @@ class _Hero extends StatelessWidget {
                               expanded: true,
                               onPressed: () => Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const MatchingProfilesScreen(),
+                                  builder: (_) => MatchingProfilesScreen(
+                                    onLogin: onLogin,
+                                    onCompleteProfile: onCompleteProfile,
+                                  ),
                                 ),
                               ),
                             ),

@@ -163,37 +163,42 @@ interface SearchFilters {
         }
 
         <div class="results">
-          @if (!canViewProfiles) {
-            <div class="access-overlay card">
-              <span class="lock-icon">🔒</span>
-              @if (!auth.isLoggedIn()) {
-                <h3>Login to view profiles</h3>
-                <p>Search is only available to registered members with a complete profile.</p>
-                <div class="access-actions">
-                  <a routerLink="/login" class="btn btn-primary">Login</a>
-                  <a routerLink="/register" class="btn btn-outline">Register Free</a>
-                </div>
-              } @else {
-                <h3>Complete your profile first</h3>
-                <p>Fill all required fields to unlock search and matching profiles.</p>
-                <a routerLink="/my-profile" class="btn btn-primary">Complete Your Profile</a>
-              }
-            </div>
-          } @else if (searchError()) {
+          @if (searchError()) {
             <div class="alert alert-error" style="margin-bottom: 1rem;">{{ searchError() }}</div>
           }
-          @if (canViewProfiles && loading()) {
+          @if (loading()) {
             <div class="loading-center"><div class="spinner"></div></div>
-          } @else if (canViewProfiles && !profiles().length && !searchError()) {
+          } @else if (!profiles().length && !searchError()) {
             <div class="empty-state card">
               <span style="font-size: 3rem">🔍</span>
               <h3>No profiles found</h3>
               <p>{{ matchingMode() ? 'No matching profiles right now — check back later' : 'Try adjusting your filters' }}</p>
             </div>
-          } @else if (canViewProfiles && profiles().length) {
-            <div class="grid-3 profiles-grid">
-              @for (profile of profiles(); track profile.id; let i = $index) {
-                <app-profile-card [profile]="profile" [delay]="(i * 0.05) + 's'" />
+          } @else if (profiles().length) {
+            <div class="results-stage" [class.is-gated]="!canViewProfiles">
+              <div class="results-data">
+                <div class="grid-3 profiles-grid">
+                  @for (profile of profiles(); track profile.id; let i = $index) {
+                    <app-profile-card [profile]="profile" [delay]="(i * 0.05) + 's'" />
+                  }
+                </div>
+              </div>
+              @if (!canViewProfiles) {
+                <div class="access-overlay card">
+                  <span class="lock-icon">🔒</span>
+                  @if (!auth.isLoggedIn()) {
+                    <h3>Login to view profiles</h3>
+                    <p>Search is only available to registered members with a complete profile.</p>
+                    <div class="access-actions">
+                      <a routerLink="/login" class="btn btn-primary">Login</a>
+                      <a routerLink="/register" class="btn btn-outline">Register Free</a>
+                    </div>
+                  } @else {
+                    <h3>Complete your profile first</h3>
+                    <p>Fill all required fields to unlock search and matching profiles.</p>
+                    <a routerLink="/my-profile" class="btn btn-primary">Complete Your Profile</a>
+                  }
+                </div>
               }
             </div>
             @if (totalPages() > 1) {
@@ -275,10 +280,19 @@ interface SearchFilters {
     .empty-state { text-align: center; padding: 4rem 2rem; }
     .empty-state h3 { margin: 1rem 0 0.5rem; }
     .results { position: relative; min-height: 240px; width: 100%; min-width: 0; }
+    .results-stage { position: relative; }
+    .results-stage.is-gated .results-data {
+      filter: blur(7px);
+      -webkit-filter: blur(7px);
+      pointer-events: none;
+      user-select: none;
+    }
     .access-overlay {
-      position: relative;
+      position: absolute;
       z-index: 5;
-      margin: 2rem auto 0;
+      top: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
       width: min(440px, calc(100% - 2rem));
       padding: 1.75rem;
       text-align: center;
@@ -422,15 +436,9 @@ export class SearchComponent implements OnInit {
   }
 
   search(): void {
-    if (!this.canViewProfiles) {
-      this.profiles.set([]);
-      this.loading.set(false);
-      this.searchError.set('');
-      return;
-    }
     this.loading.set(true);
     this.searchError.set('');
-    const request = this.matchingMode()
+    const request = this.canViewProfiles && this.matchingMode()
       ? this.profileService.getMatches({ ...this.filters, page: this.page() })
       : this.profileService.search({ ...this.filters, page: this.page() });
     request.subscribe({

@@ -38,67 +38,52 @@ class ProfileAccessGate extends StatelessWidget {
         if (canView) return child;
 
         final loggedIn = AuthController.instance.isLoggedIn;
-
-        return Container(
-          width: double.infinity,
-          constraints: BoxConstraints(minHeight: minHeight),
-          color: AppColors.ivory,
-          child: ClipRect(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Real data underneath — heavily blurred + dimmed
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(
-                        sigmaX: blurSigma,
-                        sigmaY: blurSigma,
-                        tileMode: TileMode.clamp,
-                      ),
-                      child: Opacity(
-                        opacity: 0.55,
-                        child: ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            const Color(0xFF2D1B1B).withValues(alpha: 0.18),
-                            BlendMode.srcATop,
-                          ),
-                          child: child,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Soft wash so cards look "dundla"
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.ivory.withValues(alpha: 0.35),
-                          AppColors.blush.withValues(alpha: 0.55),
-                          AppColors.ivory.withValues(alpha: 0.7),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
-                  child: FadeSlide(
-                    child: _AccessCard(
-                      loggedIn: loggedIn,
-                      onLogin: onLogin,
-                      onRegister: onRegister ?? onLogin,
-                      onCompleteProfile: onCompleteProfile,
-                    ),
-                  ),
-                ),
-              ],
+        final card = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          child: FadeSlide(
+            child: _AccessCard(
+              loggedIn: loggedIn,
+              onLogin: onLogin,
+              onRegister: onRegister ?? onLogin,
+              onCompleteProfile: onCompleteProfile,
             ),
           ),
+        );
+        final blurred = IgnorePointer(
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(
+              sigmaX: blurSigma,
+              sigmaY: blurSigma,
+              tileMode: TileMode.decal,
+            ),
+            child: child,
+          ),
+        );
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final expand = constraints.hasBoundedHeight && constraints.maxHeight.isFinite;
+            if (expand) {
+              return Stack(
+                fit: StackFit.expand,
+                alignment: Alignment.topCenter,
+                children: [
+                  blurred,
+                  Align(alignment: Alignment.topCenter, child: card),
+                ],
+              );
+            }
+            return Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: minHeight),
+                  child: blurred,
+                ),
+                card,
+              ],
+            );
+          },
         );
       },
     );

@@ -22,6 +22,110 @@ function parseDateParam(value, fallback) {
   return fallback;
 }
 
+/**
+ * mysql2 returns DATE as a JS Date. String(date).slice(0, 10) is "Tue Nov 03",
+ * and getFullYear() shifts a day when the server timezone is not Pakistan.
+ * Prefer the calendar date from SQL (DATE_FORMAT) or from UTC midnight.
+ */
+function toIsoDate(value) {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const utc = value.toISOString().slice(0, 10);
+    const localH = value.getHours();
+    const localM = value.getMinutes();
+    const localS = value.getSeconds();
+    const localMs = value.getMilliseconds();
+    if (localH === 0 && localM === 0 && localS === 0 && localMs === 0) {
+      const y = value.getFullYear();
+      const m = String(value.getMonth() + 1).padStart(2, '0');
+      const d = String(value.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return utc;
+  }
+  const match = String(value).match(/(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+}
+
+let activityTableReady = false;
+
+async function ensureActivityTable() {
+  if (activityTableReady) return;
+  const sql = `
+    CREATE TABLE IF NOT EXISTS user_activity_events (
+      id CHAR(36) NOT NULL PRIMARY KEY,
+      visitor_key VARCHAR(64) NOT NULL,
+      user_id CHAR(36) NULL,
+      event_type VARCHAR(30) NOT NULL,
+      payload JSON NULL,
+      path VARCHAR(200) NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_activity_visitor_created (visitor_key, created_at),
+      KEY idx_activity_user_created (user_id, created_at),
+      KEY idx_activity_type_created (event_type, created_at),
+      KEY idx_activity_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `;
+  await pool.query(sql);
+  activityTableReady = true;
+}
+
+function displayName(row) {
+  if (row.first_name) {
+    return `${row.first_name}${row.last_name ? ` ${row.last_name}` : ''}`;
+  }
+  return row.email || `Guest · ${String(row.visitor_key).slice(0, 8)}`;
+}
+
+async function fetchVisitorsBetween(from, to) {
+  const usersResult = await pool.query(
+    `SELECT
+       v.visitor_key,
+       MAX(v.user_id) AS user_id,
+       SUM(v.page_views) AS page_views,
+       SUBSTRING_INDEX(GROUP_CONCAT(v.last_path ORDER BY v.last_seen_at DESC SEPARATOR '||'), '||', 1) AS last_path,
+       MIN(v.first_seen_at) AS first_seen_at,
+       MAX(v.last_seen_at) AS last_seen_at,
+       MAX(u.email) AS email,
+       MAX(p.id) AS profile_id,
+       MAX(p.first_name) AS first_name,
+       MAX(p.last_name) AS last_name
+     FROM site_visitors_daily v
+     LEFT JOIN users u ON u.id = v.user_id
+     LEFT JOIN profiles p ON p.user_id = v.user_id
+     WHERE v.visit_date BETWEEN $1 AND $2
+     GROUP BY v.visitor_key
+     ORDER BY MAX(v.last_seen_at) DESC`,
+    [from, to]
+  );
+
+  const keys = usersResult.rows.map((r) => r.visitor_key);
+  const activityMap = await loadActivityCounts(keys, from, to);
+
+  return usersResult.rows.map((r) => {
+    const activity = activityMap.get(r.visitor_key) || { searches_count: 0, profile_views_count: 0 };
+    return {
+      visitor_key: r.visitor_key,
+      user_id: r.user_id,
+      email: r.email,
+      profile_id: r.profile_id,
+      first_name: r.first_name,
+      last_name: r.last_name,
+      page_views: Number(r.page_views || 0),
+      last_path: r.last_path,
+      first_seen_at: r.first_seen_at,
+      last_seen_at: r.last_seen_at,
+      searches_count: activity.searches_count,
+      profile_views_count: activity.profile_views_count,
+      display_name: displayName(r),
+    };
+  });
+}
+
 function daysBetween(a, b) {
   const ms = new Date(`${b}T00:00:00Z`).getTime() - new Date(`${a}T00:00:00Z`).getTime();
   return Math.round(ms / 86400000);
@@ -76,6 +180,7 @@ async function trackActivity(req, res) {
     const userId = req.user?.id || null;
     const id = crypto.randomUUID();
 
+    await ensureActivityTable();
     await pool.query(
       `INSERT INTO user_activity_events (id, visitor_key, user_id, event_type, payload, path)
        VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -91,6 +196,35 @@ async function trackActivity(req, res) {
   }
 }
 
+async function loadActivityCounts(keys, from, to) {
+  const activityMap = new Map();
+  if (!keys.length) return activityMap;
+  try {
+    await ensureActivityTable();
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+    const activityResult = await pool.query(
+      `SELECT visitor_key, event_type, COUNT(*) AS cnt
+       FROM user_activity_events
+       WHERE visitor_key IN (${placeholders})
+         AND created_at >= $${keys.length + 1}
+         AND created_at < DATE_ADD($${keys.length + 2}, INTERVAL 1 DAY)
+       GROUP BY visitor_key, event_type`,
+      [...keys, from, to]
+    );
+    for (const row of activityResult.rows) {
+      if (!activityMap.has(row.visitor_key)) {
+        activityMap.set(row.visitor_key, { searches_count: 0, profile_views_count: 0 });
+      }
+      const bucket = activityMap.get(row.visitor_key);
+      if (row.event_type === 'search') bucket.searches_count = Number(row.cnt || 0);
+      if (row.event_type === 'profile_view') bucket.profile_views_count = Number(row.cnt || 0);
+    }
+  } catch (err) {
+    console.error('activity counts skipped:', err.message);
+  }
+  return activityMap;
+}
+
 async function getVisitorAnalytics(req, res) {
   try {
     const today = pakistanToday();
@@ -102,7 +236,9 @@ async function getVisitorAnalytics(req, res) {
     }
 
     const dailyResult = await pool.query(
-      `SELECT visit_date, COUNT(*) AS visitors, COALESCE(SUM(page_views), 0) AS page_views
+      `SELECT DATE_FORMAT(visit_date, '%Y-%m-%d') AS visit_date,
+              COUNT(*) AS visitors,
+              COALESCE(SUM(page_views), 0) AS page_views
        FROM site_visitors_daily
        WHERE visit_date BETWEEN $1 AND $2
        GROUP BY visit_date
@@ -112,7 +248,7 @@ async function getVisitorAnalytics(req, res) {
 
     const dailyMap = new Map(
       dailyResult.rows.map((r) => [
-        String(r.visit_date).slice(0, 10),
+        toIsoDate(r.visit_date),
         { visitors: Number(r.visitors || 0), page_views: Number(r.page_views || 0) },
       ])
     );
@@ -126,7 +262,7 @@ async function getVisitorAnalytics(req, res) {
     // Include history before `from` so we can compute return gaps correctly.
     const lookback = addDays(from, -60);
     const visitsResult = await pool.query(
-      `SELECT visitor_key, visit_date
+      `SELECT visitor_key, DATE_FORMAT(visit_date, '%Y-%m-%d') AS visit_date
        FROM site_visitors_daily
        WHERE visit_date BETWEEN $1 AND $2
        ORDER BY visitor_key ASC, visit_date ASC`,
@@ -136,7 +272,7 @@ async function getVisitorAnalytics(req, res) {
     const byVisitor = new Map();
     for (const row of visitsResult.rows) {
       const key = row.visitor_key;
-      const date = String(row.visit_date).slice(0, 10);
+      const date = toIsoDate(row.visit_date);
       if (!byVisitor.has(key)) byVisitor.set(key, []);
       byVisitor.get(key).push(date);
     }
@@ -169,6 +305,12 @@ async function getVisitorAnalytics(req, res) {
 
     const totalVisitors = daily.reduce((sum, d) => sum + d.visitors, 0);
     const totalPageViews = daily.reduce((sum, d) => sum + d.page_views, 0);
+    let visitors = [];
+    try {
+      visitors = await fetchVisitorsBetween(from, to);
+    } catch (err) {
+      console.error('visitor list skipped:', err.message);
+    }
 
     res.json({
       success: true,
@@ -177,8 +319,10 @@ async function getVisitorAnalytics(req, res) {
         to,
         total_visitors: totalVisitors,
         total_page_views: totalPageViews,
+        unique_visitors: visitors.length,
         daily,
         return_gaps: gaps,
+        visitors,
       },
     });
   } catch (err) {
@@ -212,7 +356,8 @@ async function getGapVisitors(req, res) {
 
     const lookback = addDays(from, -60);
     const visitsResult = await pool.query(
-      `SELECT visitor_key, visit_date, user_id, page_views, last_path, last_seen_at
+      `SELECT visitor_key, DATE_FORMAT(visit_date, '%Y-%m-%d') AS visit_date,
+              user_id, page_views, last_path, last_seen_at
        FROM site_visitors_daily
        WHERE visit_date BETWEEN $1 AND $2
        ORDER BY visitor_key ASC, visit_date ASC`,
@@ -229,9 +374,9 @@ async function getGapVisitors(req, res) {
     const matchedKeys = new Map();
     for (const [key, rows] of byVisitor.entries()) {
       for (let i = 0; i < rows.length; i++) {
-        const date = String(rows[i].visit_date).slice(0, 10);
+        const date = toIsoDate(rows[i].visit_date);
         if (date < from || date > to) continue;
-        const prev = i === 0 ? null : String(rows[i - 1].visit_date).slice(0, 10);
+        const prev = i === 0 ? null : toIsoDate(rows[i - 1].visit_date);
         if (classifyGap(prev, date) !== gapType) continue;
         const existing = matchedKeys.get(key);
         if (!existing || String(rows[i].last_seen_at) > String(existing.last_seen_at || '')) {
@@ -270,25 +415,7 @@ async function getGapVisitors(req, res) {
       [...keys, from, to]
     );
 
-    const activityPlaceholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-    const activityResult = await pool.query(
-      `SELECT visitor_key, event_type, COUNT(*) AS cnt
-       FROM user_activity_events
-       WHERE visitor_key IN (${activityPlaceholders})
-         AND created_at >= $${keys.length + 1}
-         AND created_at < DATE_ADD($${keys.length + 2}, INTERVAL 1 DAY)
-       GROUP BY visitor_key, event_type`,
-      [...keys, from, to]
-    );
-    const activityMap = new Map();
-    for (const row of activityResult.rows) {
-      if (!activityMap.has(row.visitor_key)) {
-        activityMap.set(row.visitor_key, { searches_count: 0, profile_views_count: 0 });
-      }
-      const bucket = activityMap.get(row.visitor_key);
-      if (row.event_type === 'search') bucket.searches_count = Number(row.cnt || 0);
-      if (row.event_type === 'profile_view') bucket.profile_views_count = Number(row.cnt || 0);
-    }
+    const activityMap = await loadActivityCounts(keys, from, to);
 
     res.json({
       success: true,
@@ -324,6 +451,7 @@ async function getGapVisitors(req, res) {
 
 async function getDayVisitors(req, res) {
   try {
+    await ensureActivityTable();
     const date = parseDateParam(req.query.date, pakistanToday());
     const result = await pool.query(
       `SELECT
@@ -387,6 +515,7 @@ async function getDayVisitors(req, res) {
 
 async function getVisitorDetail(req, res) {
   try {
+    await ensureActivityTable();
     const visitorKey = resolveStoredVisitorKey(req.query.visitor_key);
     if (!visitorKey) {
       return res.status(400).json({ success: false, message: 'visitor_key required' });
@@ -401,8 +530,8 @@ async function getVisitorDetail(req, res) {
          v.visitor_key,
          MAX(v.user_id) AS user_id,
          SUM(v.page_views) AS page_views,
-         MIN(v.visit_date) AS first_visit,
-         MAX(v.visit_date) AS last_visit,
+         DATE_FORMAT(MIN(v.visit_date), '%Y-%m-%d') AS first_visit,
+         DATE_FORMAT(MAX(v.visit_date), '%Y-%m-%d') AS last_visit,
          COUNT(*) AS visit_days
        FROM site_visitors_daily v
        WHERE v.visitor_key = $1 AND v.visit_date BETWEEN $2 AND $3
@@ -486,7 +615,8 @@ async function getVisitorDetail(req, res) {
     }
 
     const visitDays = await pool.query(
-      `SELECT visit_date, page_views, last_path, first_seen_at, last_seen_at
+      `SELECT DATE_FORMAT(visit_date, '%Y-%m-%d') AS visit_date,
+              page_views, last_path, first_seen_at, last_seen_at
        FROM site_visitors_daily
        WHERE visitor_key = $1 AND visit_date BETWEEN $2 AND $3
        ORDER BY visit_date DESC`,
@@ -517,4 +647,5 @@ module.exports = {
   getGapVisitors,
   getDayVisitors,
   getVisitorDetail,
+  ensureActivityTable,
 };

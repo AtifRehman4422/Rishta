@@ -95,15 +95,6 @@ class SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _search() async {
-    if (!AuthController.instance.canViewProfiles) {
-      if (!mounted) return;
-      setState(() {
-        _profiles = [];
-        _loading = false;
-        _error = null;
-      });
-      return;
-    }
     setState(() {
       _loading = true;
       _error = null;

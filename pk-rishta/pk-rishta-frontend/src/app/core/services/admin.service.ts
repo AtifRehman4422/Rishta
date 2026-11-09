@@ -114,6 +114,7 @@ export class AdminService {
       skip_3: number;
       skip_4_plus: number;
     };
+    visitors: AdminVisitorRow[];
   }>> {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.http.get<ApiResponse<{
@@ -130,6 +131,7 @@ export class AdminService {
         skip_3: number;
         skip_4_plus: number;
       };
+      visitors: AdminVisitorRow[];
     }>>(`${this.baseUrl}/analytics/visitors`, { params });
   }
 
@@ -170,8 +172,8 @@ export class AdminService {
     );
   }
 
-  getUsers(page = 1, search = '', status = ''): Observable<ApiResponse<AdminUser[]>> {
-    let params = new HttpParams().set('page', page).set('limit', 15);
+  getUsers(page = 1, search = '', status = '', limit = 20): Observable<ApiResponse<AdminUser[]>> {
+    let params = new HttpParams().set('page', page).set('limit', limit);
     if (search) params = params.set('search', search);
     if (status) params = params.set('status', status);
     return this.http.get<ApiResponse<AdminUser[]>>(`${this.baseUrl}/users`, { params });

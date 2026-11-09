@@ -7,13 +7,22 @@ import '../../core/network/api_client.dart';
 import '../../core/state/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/profile_access_gate.dart';
 import '../../core/widgets/profile_card.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../auth/register_screen.dart';
 import '../profile/profile_detail_screen.dart';
 
 class MatchingProfilesScreen extends StatefulWidget {
-  const MatchingProfilesScreen({super.key});
+  const MatchingProfilesScreen({
+    super.key,
+    required this.onLogin,
+    required this.onCompleteProfile,
+  });
+
+  final VoidCallback onLogin;
+  final VoidCallback onCompleteProfile;
 
   @override
   State<MatchingProfilesScreen> createState() => _MatchingProfilesScreenState();
@@ -33,12 +42,14 @@ class _MatchingProfilesScreenState extends State<MatchingProfilesScreen> {
   @override
   void initState() {
     super.initState();
+    AuthController.instance.addListener(_load);
     _load();
     _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    AuthController.instance.removeListener(_load);
     _scrollController.dispose();
     super.dispose();
   }
@@ -53,22 +64,15 @@ class _MatchingProfilesScreenState extends State<MatchingProfilesScreen> {
   }
 
   Future<void> _load() async {
-    if (!AuthController.instance.canViewProfiles) {
-      if (!mounted) return;
-      setState(() {
-        _profiles = [];
-        _loading = false;
-        _error = 'Complete your profile to view matches';
-      });
-      return;
-    }
     setState(() {
       _loading = true;
       _error = null;
       _page = 1;
     });
     try {
-      final result = await _repo.getMatches(page: 1, limit: 20);
+      final result = AuthController.instance.canViewProfiles
+          ? await _repo.getMatches(page: 1, limit: 20)
+          : await _repo.search(page: 1, limit: 20);
       if (!mounted) return;
       setState(() {
         _profiles = result.profiles;
@@ -87,7 +91,9 @@ class _MatchingProfilesScreenState extends State<MatchingProfilesScreen> {
   Future<void> _loadMore() async {
     setState(() => _loadingMore = true);
     try {
-      final result = await _repo.getMatches(page: _page + 1, limit: 20);
+      final result = AuthController.instance.canViewProfiles
+          ? await _repo.getMatches(page: _page + 1, limit: 20)
+          : await _repo.search(page: _page + 1, limit: 20);
       if (!mounted) return;
       setState(() {
         _profiles.addAll(result.profiles);
@@ -116,7 +122,16 @@ class _MatchingProfilesScreenState extends State<MatchingProfilesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.ivory,
-      body: CustomScrollView(
+      body: ProfileAccessGate(
+        onLogin: widget.onLogin,
+        onCompleteProfile: widget.onCompleteProfile,
+        onRegister: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const RegisterScreen()),
+          );
+        },
+        blurSigma: 16,
+        child: CustomScrollView(
         controller: _scrollController,
         slivers: [
           SliverAppBar(
@@ -222,6 +237,7 @@ class _MatchingProfilesScreenState extends State<MatchingProfilesScreen> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

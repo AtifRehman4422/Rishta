@@ -4,6 +4,10 @@ const { isProduction } = require('../middleware/security');
 const { normalizeProfileLocation, normalizePartnerPreferencesLocation } = require('../utils/location');
 const { applyAddressPrivacy, hideCompleteAddress } = require('../utils/addressPrivacy');
 
+// Profiles already in the database stay in search and AI matching.
+// Accounts created after this time appear only once the profile is complete.
+const LEGACY_PROFILE_CUTOFF = '2026-11-03 13:30:00';
+
 function fail(res, err, status = 500) {
   return res.status(status).json({
     success: false,
@@ -254,9 +258,13 @@ async function searchProfiles(req, res) {
       min_age, max_age, education, profession, page = 1, limit = 12,
     } = req.query;
 
-    const conditions = ["p.visibility = 'public'", 'u.is_active = true'];
-    const params = [];
-    let idx = 1;
+    const conditions = [
+      "p.visibility = 'public'",
+      'u.is_active = true',
+      `(p.is_profile_complete = true OR p.created_at < $${1})`,
+    ];
+    const params = [LEGACY_PROFILE_CUTOFF];
+    let idx = 2;
 
     if (gender) { conditions.push(`p.gender = $${idx++}`); params.push(gender); }
     if (city) { conditions.push(`p.city ILIKE $${idx++}`); params.push(`%${city}%`); }
@@ -881,9 +889,9 @@ async function getMatchingProfiles(req, res) {
        WHERE p.id <> $1
          AND p.gender <> $2
          AND p.visibility = 'public'
-         AND p.is_profile_complete = true
-         AND u.is_active = true`,
-      [own.id, own.gender]
+         AND u.is_active = true
+         AND (p.is_profile_complete = true OR p.created_at < $3)`,
+      [own.id, own.gender, LEGACY_PROFILE_CUTOFF]
     );
 
     const minAgeFilter = parseOptionalInt(req.query.min_age) ?? parseOptionalInt(preferences.min_age);

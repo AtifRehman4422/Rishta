@@ -66,13 +66,17 @@ async function getAllUsers(req, res) {
       params
     );
 
+    const total = parseInt(countResult.rows[0].count, 10) || 0;
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 20;
     res.json({
       success: true,
       data: result.rows,
       pagination: {
-        total: parseInt(countResult.rows[0].count),
-        page: parseInt(page),
-        limit: parseInt(limit),
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
       },
     });
   } catch (err) {

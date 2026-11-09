@@ -19,6 +19,7 @@ const contactRoutes = require('./routes/contact');
 const visitRoutes = require('./routes/visits');
 const favoriteRoutes = require('./routes/favorites');
 const adminRoutes = require('./routes/admin');
+const { ensureActivityTable } = require('./controllers/analyticsController');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -166,7 +167,13 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-function startServer() {
+async function startServer() {
+  try {
+    await ensureActivityTable();
+  } catch (err) {
+    console.error('Could not ensure user_activity_events:', err.message);
+  }
+
   const sslKey = process.env.SSL_KEY_PATH;
   const sslCert = process.env.SSL_CERT_PATH;
 

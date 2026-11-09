@@ -123,8 +123,7 @@ const GAP_META: { key: GapKey; label: string; hint: string; color: string }[] = 
           </div>
         </div>
 
-        @if (listTitle()) {
-          <div class="va-list-card animate-fade-in-up">
+        <div class="va-list-card animate-fade-in-up">
             <div class="va-list-head">
               <div>
                 <h3>{{ listTitle() }}</h3>
@@ -135,6 +134,9 @@ const GAP_META: { key: GapKey; label: string; hint: string; color: string }[] = 
                   }
                 </p>
               </div>
+              @if (selectedDay() || selectedGap()) {
+                <button type="button" class="btn btn-outline btn-sm" (click)="showAll()">All visitors</button>
+              }
               <input
                 class="form-input va-search"
                 placeholder="Filter by name or email..."
@@ -217,7 +219,6 @@ const GAP_META: { key: GapKey; label: string; hint: string; color: string }[] = 
               }
             }
           </div>
-        }
       }
     </section>
 
@@ -688,6 +689,7 @@ export class AdminVisitorAnalyticsComponent implements OnInit {
   totalVisitors = signal(0);
   totalPageViews = signal(0);
 
+  private rangeVisitors: AdminVisitorRow[] = [];
   selectedDay = signal<string | null>(null);
   selectedGap = signal<GapKey | null>(null);
   visitors = signal<AdminVisitorRow[]>([]);
@@ -706,12 +708,12 @@ export class AdminVisitorAnalyticsComponent implements OnInit {
     return peak.visitors ? `${this.shortDate(peak.date)} (${peak.visitors})` : '—';
   });
   listTitle = computed(() => {
-    if (this.selectedDay()) return `Visitors on ${this.selectedDay()}`;
+    if (this.selectedDay()) return `Visitors on ${this.shortDate(this.selectedDay()!)}`;
     if (this.selectedGap()) {
       const meta = GAP_META.find((g) => g.key === this.selectedGap());
       return meta ? meta.label : 'Visitors';
     }
-    return '';
+    return 'All visitors';
   });
   filteredVisitors = computed(() => {
     const q = this.listQuery().trim().toLowerCase();
@@ -772,13 +774,14 @@ export class AdminVisitorAnalyticsComponent implements OnInit {
     this.loading.set(true);
     this.selectedDay.set(null);
     this.selectedGap.set(null);
-    this.visitors.set([]);
     this.listQuery.set('');
     this.page.set(1);
     this.admin.getVisitorAnalytics(this.fromDate, this.toDate).subscribe({
       next: (res) => {
         const data = res.data;
         this.daily.set(data.daily || []);
+        this.rangeVisitors = data.visitors || [];
+        this.visitors.set(this.rangeVisitors);
         this.gaps.set({
           new: data.return_gaps?.new || 0,
           daily: data.return_gaps?.daily || 0,
@@ -793,6 +796,14 @@ export class AdminVisitorAnalyticsComponent implements OnInit {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  showAll(): void {
+    this.selectedDay.set(null);
+    this.selectedGap.set(null);
+    this.listQuery.set('');
+    this.page.set(1);
+    this.visitors.set(this.rangeVisitors);
   }
 
   openDay(date: string): void {

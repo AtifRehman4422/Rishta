@@ -203,33 +203,34 @@ import { SeoService } from '../../core/services/seo.service';
         <div class="section-ornament">💍 ✦ 💍</div>
         <h2 class="section-title text-center">Recent Profiles</h2>
         <p class="section-subtitle text-center">Verified matches from Pakistan and overseas</p>
-        @if (!canViewProfiles) {
-          <div class="recent-results">
-            <div class="recent-access-overlay card">
-              <span class="recent-lock-icon">🔒</span>
-              @if (!auth.isLoggedIn()) {
-                <h3>Login to view profiles</h3>
-                <p>Profiles are only visible to registered members with a complete profile.</p>
-                <div class="recent-access-actions">
-                  <a routerLink="/login" class="btn btn-primary">Login</a>
-                  <a routerLink="/register" class="btn btn-outline">Register Free</a>
-                </div>
-              } @else {
-                <h3>Complete your profile first</h3>
-                <p>Fill all required fields to unlock profiles and matching.</p>
-                <a routerLink="/my-profile" class="btn btn-primary">Complete Your Profile</a>
-              }
-            </div>
-          </div>
-        } @else if (loading()) {
+        @if (loading()) {
           <div class="loading-center"><div class="spinner"></div></div>
         } @else if (recentProfiles().length) {
-          <div class="recent-results">
-            <div class="grid-3 recent-profile-grid">
-              @for (profile of recentProfiles(); track profile.id; let i = $index) {
-                <app-profile-card [profile]="profile" [delay]="(i * 0.1) + 's'" />
-              }
+          <div class="recent-results" [class.is-gated]="!canViewProfiles">
+            <div class="recent-profile-layer">
+              <div class="grid-3 recent-profile-grid">
+                @for (profile of recentProfiles(); track profile.id; let i = $index) {
+                  <app-profile-card [profile]="profile" [delay]="(i * 0.1) + 's'" />
+                }
+              </div>
             </div>
+            @if (!canViewProfiles) {
+              <div class="recent-access-overlay card">
+                <span class="recent-lock-icon">🔒</span>
+                @if (!auth.isLoggedIn()) {
+                  <h3>Login to view profiles</h3>
+                  <p>Profiles are only visible to registered members with a complete profile.</p>
+                  <div class="recent-access-actions">
+                    <a routerLink="/login" class="btn btn-primary">Login</a>
+                    <a routerLink="/register" class="btn btn-outline">Register Free</a>
+                  </div>
+                } @else {
+                  <h3>Complete your profile first</h3>
+                  <p>Fill all required fields to unlock profiles and matching.</p>
+                  <a routerLink="/my-profile" class="btn btn-primary">Complete Your Profile</a>
+                }
+              </div>
+            }
           </div>
           <div class="text-center profiles-cta">
             <a routerLink="/search" class="btn btn-primary btn-lg">View All Profiles →</a>
@@ -590,10 +591,18 @@ import { SeoService } from '../../core/services/seo.service';
     .profiles-section { position: relative; background: var(--blush); }
     .profiles-cta { margin-top: 2.5rem; }
     .recent-results { position: relative; min-height: 0; }
+    .recent-results.is-gated .recent-profile-layer {
+      filter: blur(7px);
+      -webkit-filter: blur(7px);
+      pointer-events: none;
+      user-select: none;
+    }
     .recent-access-overlay {
-      position: relative;
+      position: absolute;
       z-index: 5;
-      margin: 0 auto;
+      top: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
       width: min(440px, calc(100% - 2rem));
       padding: 1.75rem;
       text-align: center;
@@ -912,11 +921,7 @@ export class HomeComponent implements OnInit {
   }
 
   private loadRecentIfAllowed(): void {
-    if (!this.canViewProfiles) {
-      this.recentProfiles.set([]);
-      this.loading.set(false);
-      return;
-    }
+    this.loading.set(true);
     this.profileService.search({ page: 1, limit: 6 }).subscribe({
       next: (res) => { this.recentProfiles.set(res.data); this.loading.set(false); },
       error: () => this.loading.set(false),
